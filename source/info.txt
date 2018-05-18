@@ -1,0 +1,53 @@
+segments_small  -> 50
+segments_big    -> 200
+segments_huge   -> 400
+segments_enormous -> 2000
+
+ ++++++++++++++++++++++++++++++++++++
+cnn2
+ - per pixel classification
+ - uses havei et al. 2 path CNN architecture
+ - test2 uses the pixel classifier on unsupervised segments
+
+cnn3
+ - blob classification
+ - straight forward single layer CNN
+
+cnn4
+ - blob classification
+ - straight forward 2 layer CNN
+
+cnn5
+ - blob classification
+ - uses havei et al. 2 path CNN architecture
+
+
+ meanshift PARAMETERS:
+ ++++++++++++++++++++++++++++++++++++
+ min-density -> 10000
+ spatial-radius -> 1
+ range-radius -> 1
+
+ hsv meanshift PARAMETERS:
+  ++++++++++++++++++++++++++++++++++++
+ min-density -> 10000
+ spatial-radius -> 5
+ range-radius -> 5
+
+
+ color scheme:
+ ++++++++++++++++++++++++++++++++++++
+cat1 = treematter
+cat2 = plywood
+cat3 = cardboard
+cat4 = bottles
+cat5 = trashbag
+cat6 = blackbag
+
+red -> treematter
+green -> plywood
+blue -> cardboard
+yellow -> bottles
+pink -> trashbag
+turquoise -> blackbag
+
