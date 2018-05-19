@@ -8,15 +8,25 @@ BOTTLES_DIR="categories/bottles/ingroup/"
 BLACKBAG_DIR="categories/blackbag/ingroup/"
 GROUND_DIR="categories/ground/ingroup/"
 MIXED_DIR="categories/mixed/"
+OUT_DIR1="hsvsegmentation_nobg"
+OUT_DIR2="hsvsegmentation_withbg"
 
-mkdir segments
-python save_segments.py savehsv $CARDBOARD_DIR &
-python save_segments.py savehsv $TREEMATTER_DIR &
-python save_segments.py savehsv $PLYWOOD_DIR &
-python save_segments.py savehsv $BOTTLES_DIR &
-python save_segments.py savehsv $BLACKBAG_DIR &
-python save_segments.py savehsv $TRASHBAG_DIR &&
-mv segments hsvsegmentation_nobg
+#mkdir $OUT_DIR1
+#python save_segments.py savehsv $CARDBOARD_DIR $OUT_DIR1 &
+#python save_segments.py savehsv $TREEMATTER_DIR $OUT_DIR1 &
+#python save_segments.py savehsv $PLYWOOD_DIR $OUT_DIR1 &
+#python save_segments.py savehsv $BOTTLES_DIR $OUT_DIR1 &
+#python save_segments.py savehsv $BLACKBAG_DIR $OUT_DIR1 &
+#python save_segments.py savehsv $TRASHBAG_DIR $OUT_DIR1 &
 
-mkdir fullsegmentation_hsv
-mv segmentation_* fullsegmentation_hsv
+mkdir $OUT_DIR2
+python save_segments.py savehsv $CARDBOARD_DIR $OUT_DIR2 showbg &
+python save_segments.py savehsv $TREEMATTER_DIR $OUT_DIR2 showbg &
+python save_segments.py savehsv $PLYWOOD_DIR $OUT_DIR2 showbg &
+python save_segments.py savehsv $BOTTLES_DIR $OUT_DIR2 showbg &
+python save_segments.py savehsv $BLACKBAG_DIR $OUT_DIR2 showbg &
+python save_segments.py savehsv $TRASHBAG_DIR $OUT_DIR2 showbg &
+
+wait
+
+echo "done exracting blobs"

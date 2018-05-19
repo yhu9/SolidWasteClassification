@@ -3,7 +3,7 @@ import sys
 import os
 import cv2
 
-OUT_DIR = "segments/"
+OUT_DIR = sys.argv[3]
 
 #for each image in directory get the segments and save them
 '''

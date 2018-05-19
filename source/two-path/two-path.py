@@ -215,6 +215,12 @@ def main(unused_argv):
                 sess.run(init)
                 merged = tf.summary.merge_all()
 
+                #saver
+                if not os.path.exists('pixelmodel'):
+                    os.makedirs('pixelmodel')
+                acc = 0.00
+
+                #run the training
                 for epoch in range(constants.CNN_EPOCHS):
 
                     #get an image batch
@@ -225,15 +231,19 @@ def main(unused_argv):
 
                     if epoch % 1 == 0:
                         acc = accuracy.eval({x: eval_x, y: eval_y})
+
+                        #save the model if it holds the highest accuracy or is tied for highest accuracy
+                        if(accnew >= acc):
+                            acc = accnew
+                            save_path = saver.save(sess,'./pixelmodel/two-path_model.ckpt')
+                            print("highest accuracy found! model saved")
+
                         print('epoch: ' + str(epoch) + '     ' +
                                 'accuracy: ' + str(acc))
                         with open("two-path_log.txt",'a') as log_out:
                             log_out.write('epoch: ' + str(epoch) + '     ' + 'accuracy: ' + str(acc) + '\n')
 
                 #saver
-                if not os.path.exists('pixelmodel'):
-                    os.makedirs('pixelmodel')
-                save_path = saver.save(sess,'./pixelmodel/two-path_model.ckpt')
                 print("Model saved in file: %s" % save_path)
 
         elif(sys.argv[1] == 'trainseg' and len(sys.argv) > 2):
@@ -250,6 +260,12 @@ def main(unused_argv):
                 sess.run(init)
                 merged = tf.summary.merge_all()
 
+                #saver
+                if not os.path.exists('segmentmodel'):
+                    os.makedirs('segmentmodel')
+                acc = 0.00
+
+                #run the training
                 for epoch in range(constants.CNN_EPOCHS):
 
                     #get a training batch and an evaluation batch all batches are randomly picked from the same file directory
@@ -261,16 +277,19 @@ def main(unused_argv):
 
                     #run the evaluation and print the results to the screen
                     if epoch % 1 == 0:
-                        acc = accuracy.eval({x: eval_x, y: eval_y})
-                        print('epoch: ' + str(epoch) + '     ' +
-                                'accuracy: ' + str(acc))
-                        with open("two-path_log.txt",'a') as log_out:
-                            log_out.write('epoch: ' + str(epoch) + '     ' + 'accuracy: ' + str(acc) + '\n')
+                        accnew = accuracy.eval({x: eval_x, y: eval_y})
 
-                #saver
-                if not os.path.exists('segmentmodel'):
-                    os.makedirs('segmentmodel')
-                save_path = saver.save(sess,'./segmentmodel/two-path_model.ckpt')
+                        #save the model if it holds the highest accuracy or is tied for highest accuracy
+                        if(accnew >= acc):
+                            acc = accnew
+                            save_path = saver.save(sess,'./segmentmodel/two-path_model.ckpt')
+                            print("highest accuracy found! model saved")
+
+                        print('epoch: ' + str(epoch) + '     ' +
+                                'accuracy: ' + str(accnew))
+                        with open("two-path_log.txt",'a') as log_out:
+                            log_out.write('epoch: ' + str(epoch) + '     ' + 'accuracy: ' + str(accnew) + '\n')
+
                 print("Model saved in file: %s" % save_path)
 
         #testing method needs a saved check point directory (model)

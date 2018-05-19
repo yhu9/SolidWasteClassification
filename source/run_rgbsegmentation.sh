@@ -8,15 +8,25 @@ BOTTLES_DIR="categories/bottles/ingroup/"
 BLACKBAG_DIR="categories/blackbag/ingroup/"
 GROUND_DIR="categories/ground/ingroup/"
 MIXED_DIR="categories/mixed/"
+OUT_DIR1="bgrsegmentation_nobg"
+OUT_DIR2="bgrsegmentation_withbg"
 
-mkdir segments
-python save_segments.py save $CARDBOARD_DIR &
-python save_segments.py save $TREEMATTER_DIR &
-python save_segments.py save $PLYWOOD_DIR &
-python save_segments.py save $BOTTLES_DIR &
-python save_segments.py save $BLACKBAG_DIR &
-python save_segments.py save $TRASHBAG_DIR &&
-mv segments bgrsegmentation_nobg
+#mkdir $OUT_DIR1
+#python save_segments.py save $CARDBOARD_DIR $OUT_DIR1 &
+#python save_segments.py save $TREEMATTER_DIR $OUT_DIR1 &
+#python save_segments.py save $PLYWOOD_DIR $OUT_DIR1 &
+#python save_segments.py save $BOTTLES_DIR $OUT_DIR1 &
+#python save_segments.py save $BLACKBAG_DIR $OUT_DIR1 &
+#python save_segments.py save $TRASHBAG_DIR $OUT_DIR1 &
 
-mkdir fullsegmentation_bgr
-mv segmentation_* fullsegmentation_bgr
+mkdir $OUT_DIR2
+python save_segments.py save $CARDBOARD_DIR $OUT_DIR2 showbg &
+python save_segments.py save $TREEMATTER_DIR $OUT_DIR2 showbg &
+python save_segments.py save $PLYWOOD_DIR $OUT_DIR2 showbg &
+python save_segments.py save $BOTTLES_DIR $OUT_DIR2 showbg &
+python save_segments.py save $BLACKBAG_DIR $OUT_DIR2 showbg &
+python save_segments.py save $TRASHBAG_DIR $OUT_DIR2 showbg &
+
+wait
+
+echo "Done extracting blobs"
