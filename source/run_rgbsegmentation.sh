@@ -11,13 +11,13 @@ MIXED_DIR="categories/mixed/"
 OUT_DIR1="bgrsegmentation_nobg"
 OUT_DIR2="bgrsegmentation_withbg"
 
-#mkdir $OUT_DIR1
-#python save_segments.py save $CARDBOARD_DIR $OUT_DIR1 &
-#python save_segments.py save $TREEMATTER_DIR $OUT_DIR1 &
-#python save_segments.py save $PLYWOOD_DIR $OUT_DIR1 &
-#python save_segments.py save $BOTTLES_DIR $OUT_DIR1 &
-#python save_segments.py save $BLACKBAG_DIR $OUT_DIR1 &
-#python save_segments.py save $TRASHBAG_DIR $OUT_DIR1 &
+mkdir $OUT_DIR1
+python save_segments.py save $CARDBOARD_DIR $OUT_DIR1 &
+python save_segments.py save $TREEMATTER_DIR $OUT_DIR1 &
+python save_segments.py save $PLYWOOD_DIR $OUT_DIR1 &
+python save_segments.py save $BOTTLES_DIR $OUT_DIR1 &
+python save_segments.py save $BLACKBAG_DIR $OUT_DIR1 &
+python save_segments.py save $TRASHBAG_DIR $OUT_DIR1 &
 
 mkdir $OUT_DIR2
 python save_segments.py save $CARDBOARD_DIR $OUT_DIR2 showbg &

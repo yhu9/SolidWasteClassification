@@ -264,6 +264,33 @@ def meanshift(image,binning=False):
 
     return image,label_image
 
+#According to http://stackoverflow.com/questions/17063042/why-do-we-convert-from-rgb-to-hsv/17063317
+#HSV is better for object recognition compared to BGR
+# H max = 170
+# S max = 255
+# V max = 255
+def extractHSVHist(imageIn,SHOW):
+
+    color = ('h','s','v')
+    hist = []
+    for i,col in enumerate(color):
+        if col == 'h':
+            series = cv2.calcHist([imageIn],[i],None,[170],[0,170])
+        else:
+            series = cv2.calcHist([imageIn],[i],None,[256],[0,256])
+
+        hist.append(np.ravel(series)[1:])
+
+    #show the results
+    if(SHOW):
+        cv2.namedWindow('Processing Segment',cv2.WINDOW_NORMAL)
+        cv2.imshow('Processing Segment',imageIn)   #
+        plt.plot(hist)
+        plt.show()
+
+    #lop off black and white
+    return np.concatenate(np.array(hist))
+
 def extractColorBinHist(imageIn,SHOW):
     bins = 8
     colors = np.zeros((bins,bins,bins))
@@ -306,7 +333,6 @@ def extractColorBinHist(imageIn,SHOW):
     #lop off black and white
     return hist[1:-1]
 
-
 #The function extractFeatures() takes in the inputs:
 #   Mat         image
 #   np.array    markers
@@ -321,15 +347,11 @@ def extractColorBinHist(imageIn,SHOW):
 # V max = 255
 def extractColorHist(imageIn,SHOW):
 
-    #bins = 8
-    #colors = np.zeros((bins,bins,bins))
-    #height,width = imageIn.shape[:2]
-
     color = ('b','g','r')
     hist = []
     for i,col in enumerate(color):
         series = cv2.calcHist([imageIn],[i],None,[256],[0,256])
-        hist.append(np.ravel(series))
+        hist.append(np.ravel(series)[1:])
 
     #show the results
     if(SHOW):
@@ -339,7 +361,8 @@ def extractColorHist(imageIn,SHOW):
         plt.show()
 
     #lop off black and white
-    return np.ravel(hist)[1:-1]
+    return np.concatenate(np.array(hist))
+
 
 #get the blob size from the blob
 '''
@@ -575,6 +598,12 @@ def evaluate(original,mode,SHOWFLAG=False):
             displayHistogram(norm,'r--')
         return norm
 
+    elif mode == 'hsv':
+        hsvimg = cv2.cvtColor(original, cv2.COLOR_BGR2HSV)
+        hist = extractHSVHist(hsvimg,False)
+        norm = normalize(hist)
+        return norm
+
 #takes a single image and extracts all features depending on flag constants
 #based on user input
 '''
@@ -586,7 +615,7 @@ INPUTS:
 OUTPUTS:
     1. feature vector
 '''
-def evaluateSegment(segment,hogflag=False,gaborflag=False,colorflag=False,sizeflag=False):
+def evaluateSegment(segment,hogflag=False,gaborflag=False,colorflag=False,sizeflag=False,hsvflag=False):
     #extract features for each image depending on the flag constants
     features = []
 
@@ -598,6 +627,8 @@ def evaluateSegment(segment,hogflag=False,gaborflag=False,colorflag=False,sizefl
         features.append(evaluate(segment,'gabor'))
     if colorflag:
         features.append(evaluate(segment,'color'))
+    if hsvflag:
+        features.append(evaluate(segment,'hsv'))
 
     #create the full feature vector for the given instance image and push to instances
     #and also push the file name as the label for the instance

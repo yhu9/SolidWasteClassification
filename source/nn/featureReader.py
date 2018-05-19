@@ -115,17 +115,17 @@ OUTPUTS:
     2. 2d numpy array as a mask for the image
     3. 1d numpy array as labels for each instance
 '''
-def createTestingInstancesFromImage(image,hsvseg=False,hog=False,color=False,gabor=False,size=False,filename="unsupervised_segmentation.png"):
+def createTestingInstancesFromImage(image,hsvseg=False,hog=False,color=False,gabor=False,size=False,hsv=False,filename="unsupervised_segmentation.png"):
     #segment the image and extract blobs
+    print("extracting blobs")
     blobs,markers,labels = extractBlobs(image,fout=filename,hsv=hsvseg)
-    print('Blobs extracted! %i BLOBS FOUND' % len(blobs))
 
     #evaluate each blob and extract features from them
     tmp = []
     for i,blob in enumerate(blobs):
-        featurevector = analyze.evaluateSegment(blob,hogflag=hog,colorflag=color,gaborflag=gabor,sizeflag=size)
+        featurevector = analyze.evaluateSegment(blob,hogflag=hog,colorflag=color,gaborflag=gabor,sizeflag=size,hsvflag=hsv)
         #console output to show progress
-        print("%i of blob %i ---> DONE" % (i + 1, len(blobs)))
+        print("%i of blob %i ---> FEATURES EXTRACTED" % (i + 1, len(blobs)))
         tmp.append(featurevector)
 
     #create numpy array

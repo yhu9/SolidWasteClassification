@@ -103,16 +103,18 @@ def main(unused_argv):
 
             #model name
             modelpath = sys.argv[3]
-            hogflag = 'hog' in modelpath
-            gaborflag = 'gabor' in modelpath
-            colorflag = 'color' in modelpath
-            sizeflag = 'size' in modelpath
-            hsvsegflag = 'hsvseg' in modelpath
+            tokens = modelpath.split('_')
+            hogflag = 'hog' in tokens[0]
+            gaborflag = 'gabor' in tokens[0]
+            colorflag = 'color' in tokens[0]
+            sizeflag = 'size' in tokens[0]
+            hsvflag = 'hsv' in tokens[0]
+            hsvsegflag = 'hsvseg' in tokens[1]
 
             #extract the testing instances from the image
             #look at the model naming convention to see what features we are extracting
             fout = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
-            blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,filename=fout)
+            blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,hsv=hsvflag,filename=fout)
             print("features extracted")
 
             #apply pca on the instances
@@ -257,6 +259,8 @@ def main(unused_argv):
         #testing method needs a saved check point directory (model)
         #and any other flags
         elif flags['test']:
+
+            '''
             print("--------------------------------------------------------\n\n")
             print("for running testing mode: ")
             print("\n\n******* PAREMETERS ARE OPTIONAL *******")
@@ -265,7 +269,7 @@ def main(unused_argv):
             print("test IMAGEPATH MODELPATH *FEATUREPATH")
             print("\n\n")
             print("--------------------------------------------------------\n\n")
-
+            '''
 
             #restore the graph and make the predictions and show the segmented image
             with tf.Session() as sess:
