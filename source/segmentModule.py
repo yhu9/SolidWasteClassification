@@ -52,7 +52,7 @@ input:  original image
 output: none
 console: original number of segments, saved number of segments after size reduction,  image category
 '''
-def saveSegments(original,labels,out_dir,category,SHOW=False,showbg=True):
+def saveSegments(original,labels,out_dir,category,SHOW=False,showbg=False):
 
     unique_labels = np.unique(labels)
     blank = original - original
@@ -110,7 +110,7 @@ def saveSegments(original,labels,out_dir,category,SHOW=False,showbg=True):
         #save the file with a unique name
         f_out =  str(count) + "_" + category
         fout = os.path.join(out_dir,f_out)
-        cv2.imwrite(f_out,cropped)
+        cv2.imwrite(fout,cropped)
         count += 1
 
         if(SHOW):

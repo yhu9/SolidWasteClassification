@@ -56,13 +56,20 @@ def genFromText(filepath):
 #returns inputs and labels
 def getBatch(n,instances,labels):
 
+    if n >= len(instances):
+        n = len(instances) - 1
+        print("batch size is too large for the instances given: %i" % len(instances))
     batch = []
     batch_labels = []
 
     for i in range(n):
-        index = random.randint(0,(len(labels) - 1))
+        index = random.randint(0,(len(instances) - 1))
         batch.append(instances[index])
         batch_labels.append(labels[index])
+
+    tmp = list(zip(batch,batch_labels))
+    random.shuffle(tmp)
+    batch,batch_labels = zip(*tmp)
 
     #return the created content
     return np.array(batch),np.array(batch_labels)

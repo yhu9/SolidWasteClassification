@@ -59,7 +59,6 @@ flags = {}
 flags['train'] = 'train' in sys.argv
 flags['test'] = 'test' in sys.argv
 flags['pca'] = 'pca' in sys.argv
-flags['hsv'] = 'hsv' in sys.argv
 #######################################################################################
 
 #Main Function
@@ -92,11 +91,7 @@ def main(unused_argv):
         elif flags['test']:
             #read the image from the image file
             if os.path.isfile(sys.argv[2]):
-                tmp = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
-                if flags['hsv']:
-                    image = cv2.cvtColor(tmp,cv2.COLOR_BGR2HSV)
-                else:
-                    image = tmp
+                image = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
             else:
                 print("image could not be read!")
                 sys.exit()
@@ -222,17 +217,50 @@ def main(unused_argv):
                     os.makedirs(modelpath)
                 savedir = os.path.join(modelpath,"nn_model.ckpt")
 
+                #separate the instances into its proper categories
+                cat1,cat2,cat3,cat4,cat5,cat6 = [],[],[],[],[],[]
+                lab1,lab2,lab3,lab4,lab5,lab6 = [],[],[],[],[],[]
+                for i,l in zip(new_instances,labels):
+                    if np.array_equal(l, constants.CAT1_ONEHOT):
+                        cat1.append(i)
+                        lab1.append(constants.CAT1_ONEHOT)
+                    elif np.array_equal(l, constants.CAT2_ONEHOT):
+                        cat2.append(i)
+                        lab2.append(constants.CAT2_ONEHOT)
+                    elif np.array_equal(l, constants.CAT3_ONEHOT):
+                        cat3.append(i)
+                        lab3.append(constants.CAT3_ONEHOT)
+                    elif np.array_equal(l, constants.CAT4_ONEHOT):
+                        cat4.append(i)
+                        lab4.append(constants.CAT4_ONEHOT)
+                    elif np.array_equal(l, constants.CAT5_ONEHOT):
+                        cat5.append(i)
+                        lab5.append(constants.CAT5_ONEHOT)
+                    elif np.array_equal(l, constants.CAT6_ONEHOT):
+                        cat6.append(i)
+                        lab6.append(constants.CAT6_ONEHOT)
+
                 #training of the model
                 acc = 0.00;
                 for epoch in range(constants.NN_EPOCHS):
 
-                    #get an image batch
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,new_instances,labels)
-                    eval_x,eval_y = featureReader.getBatch(constants.BATCH_SIZE,new_instances,labels)
-
+                    #get an image batch for each category and train on it
+                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat1,lab1)
+                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
+                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat2,lab2)
+                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
+                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat3,lab3)
+                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
+                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat4,lab4)
+                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
+                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat5,lab5)
+                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
+                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat6,lab6)
                     optimizer.run(feed_dict={x: batch_x, y: batch_y})
 
+                    #evaluate the model using a test set
                     if epoch % 1 == 0:
+                        eval_x,eval_y = featureReader.getBatch(constants.BATCH_SIZE,new_instances,labels)
                         accnew = accuracy.eval({x: eval_x, y: eval_y})
 
                         #save the model if it holds the highest accuracy or is tied for highest accuracy
@@ -245,7 +273,6 @@ def main(unused_argv):
                                 'accuracy: ' + str(accnew))
                         with open(logdir,'a') as log_out:
                             log_out.write('epoch: ' + str(epoch) + '     ' + 'accuracy: ' + str(accnew) + '\n')
-                            log_out.write("\n")
 
                 #PRINT OUT TO CONSOLE AND LOG THE HIGHEST ACCURACY ACHIEVED
                 OUTPUT = "HIGEST ACCURACY ACHIEVED: " + str(acc)
@@ -284,8 +311,9 @@ def main(unused_argv):
                 predictions = rawpredictions.argmax(axis=1)
                 print("predictions made")
                 print(predictions)
-                rawfile = "rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".txt"
-                with open("rawoutput.txt",'w') as fout:
+                rawname = "rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".txt"
+                rawfile = os.path.join('logs',rawname)
+                with open(rawfile,'w') as fout:
                     for raw,cat,mark in zip(rawpredictions,predictions,markerlabels):
                         fout.write(str("cat: " + str(cat) + '    mark: ' + str(mark) + '    raw: '))
                         for val in raw:
@@ -308,22 +336,8 @@ def main(unused_argv):
                 print("segmentation results successfully saved to %s" % fileout)
 
         elif sys.argv[1] == 'debug':
-            hsvflag=False
-            hsvsegflag=True
-            #read the image
-            if os.path.isfile(sys.argv[2]):
-                tmp = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
-                if hsvflag:
-                    image = cv2.cvtColor(tmp,cv2.COLOR_BGR2HSV)
-                else:
-                    image = tmp
-            else:
-                print("image could not be read!")
 
-            #extract the testing instances from the image. NO IMPLEMENTATION ALLOWING FOR CHOOSING HOG/GABOR/COLOR/SIZE SO WE HAVE TO USE THEM ALL
-            fout='lena_segmented.png'
-            instances,markers,labels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=constants.HOG,gabor=constants.GABOR,color=constants.COLOR,size=constants.SIZE,filename=fout)
-            print("features extracted:  %i" % len(instances[0]))
+            print("nothing to debug")
 
         else:
             print("test image_filepath features_filepath model_filepath")

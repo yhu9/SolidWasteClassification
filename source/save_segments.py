@@ -22,10 +22,7 @@ def saveMSSegments(directory,bg=False):
         image1 = cv2.imread(full_dir1,cv2.IMREAD_COLOR)
 
         original, labels = segmentModule.getSegments(image1,False,rr=1,sr=1)
-        if(bg):
-            segmentModule.saveSegments(original,labels,OUT_DIR,f1)
-        else:
-            segmentModule.saveSegments(original,labels,OUT_DIR,f1,showbg=False)
+        segmentModule.saveSegments(original,labels,OUT_DIR,f1,showbg=bg)
 
 #for each image in drectory get the HSV segments and save them
 '''
@@ -44,10 +41,7 @@ def saveMSSegmentsHSV(directory,bg=False):
         img = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
 
         original, labels = segmentModule.getSegments(img,False,rr=5,sr=5)
-        if(bg):
-            segmentModule.saveSegments(original,labels,OUT_DIR,f1)
-        else:
-            segmentModule.saveSegments(original,labels,OUT_DIR,f1,showbg=False)
+        segmentModule.saveSegments(original,labels,OUT_DIR,f1,showbg=bg)
 
 def saveMSSegmentsBGRHSV(directory,bg=False):
     cat1_list = os.listdir(directory)
@@ -58,10 +52,7 @@ def saveMSSegmentsBGRHSV(directory,bg=False):
         img = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
 
         original, labels = segmentModule.getSegments(img,False,rr=5,sr=5)
-        if(bg):
-            segmentModule.saveSegments(image1,labels,OUT_DIR,f1)
-        else:
-            segmentModule.saveSegments(image1,labels,OUT_DIR,f1,showbg=False)
+        segmentModule.saveSegments(image1,labels,OUT_DIR,f1,showbg=bg)
 
 #helper function which flips an image
 '''
@@ -147,17 +138,11 @@ def multiplyImages(image_dir):
 #save rgb
 showbg = 'showbg' in sys.argv
 if len(sys.argv) >= 3 and (sys.argv[1] == 'save' or sys.argv[1] == 'savergb'):
-    if(len(sys.argv) > 3):
-        saveMSSegments(sys.argv[2],bg=showbg)
-    else:
-        saveMSSegments(sys.argv[2],bg=showbg)
+    saveMSSegments(sys.argv[2],bg=showbg)
 
 #save hsv
 elif len(sys.argv) >= 3 and sys.argv[1] == 'savehsv':
-    if(len(sys.argv) > 3):
-        saveMSSegmentsHSV(sys.argv[2],bg=showbg)
-    else:
-        saveMSSegmentsHSV(sys.argv[2],bg=showbg)
+    saveMSSegmentsHSV(sys.argv[2],bg=showbg)
 
 #extract hsv blobs , but save bgr blobs
 elif len(sys.argv) >= 3 and sys.argv[1] == 'bgrhsv':
@@ -167,6 +152,8 @@ elif len(sys.argv) >= 3 and sys.argv[1] == 'bgrhsv':
 elif len(sys.argv) == 3 and sys.argv[1] == 'rotate':
     multiplyImages(sys.argv[2])
 
+elif sys.argv[1] =='debug':
+    print(sys.argv[3])
 #otherwise the mode is wrong
 else:
     print("WRONG MODE and args")

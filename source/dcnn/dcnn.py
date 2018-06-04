@@ -78,11 +78,18 @@ def main(unused_argv):
         weights['W_local1'] = tf.Variable(tf.random_normal([7,7,3,constants.CNN_LOCAL1]))
         biases['b_local1'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
         conv1 = tf.nn.conv2d(x,weights['W_local1'],strides=[1,1,1,1],padding='SAME',name='local1')
-        activations = tf.nn.relu(conv1 + biases['b_local1'])
+        local1 = tf.nn.relu(conv1 + biases['b_local1'])
+
+        weights['W_local2'] = tf.Variable(tf.random_normal([3,3,constants.CNN_LOCAL1,constants.CNN_LOCAL2]))
+        biases['b_local2'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL2]))
+        conv2 = tf.nn.conv2d(local1,weights['W_local2'],strides=[1,1,1,1],padding='SAME',name='local2')
+        activations = tf.nn.relu(conv2 + biases['b_local2'])
 
         #create our first fully connected layer
         #magic number = width * height * n_convout
-        magic_number = int(constants.IMG_SIZE * constants.IMG_SIZE * constants.CNN_LOCAL1)
+        magic_number = int(constants.IMG_SIZE * constants.IMG_SIZE * constants.CNN_LOCAL2)
+
+        #fully conntected layer
         with tf.name_scope('Fully_Connected_1'):
             with tf.name_scope('activation'):
                 weights['W_fc'] = tf.Variable(tf.random_normal([magic_number,constants.CNN_FULL1]))
@@ -109,6 +116,7 @@ def main(unused_argv):
             accuracy = tf.reduce_mean(correct_prediction)
 
         #prediction operation
+        predict_op = tf.argmax(predictions,1)
         tf.summary.scalar('accuracy',accuracy)
 
         #################################################################################################################

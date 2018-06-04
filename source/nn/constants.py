@@ -33,7 +33,7 @@ NN_FULL2   = 500                #Number of features output for fully connected l
 IMG_SIZE = 56
 IMG_DEPTH   = 3
 KEEP_RATE = 0.85
-BATCH_SIZE = 400
+BATCH_SIZE = 150
 
 HOG=True
 GABOR=True

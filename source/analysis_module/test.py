@@ -233,7 +233,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) >= 3:
 
-        #if user input is a directory apply to all images in directoriy
+        #if user input is a directory apply to all images in directory
         if os.path.isdir(sys.argv[1]):
             #initialize list of instances
             instances = []
@@ -251,10 +251,13 @@ if __name__ == '__main__':
             jobs = []
 
             #run all jobs
+            tmpcount = 0
             for filepath in mylist:
+                tmpcount += 1
                 p = Process(target=evaluate_all,args=(filepath,values))
                 jobs.append(p)
                 p.start()
+
             #join all jobs
             for j in jobs:
                 j.join()
