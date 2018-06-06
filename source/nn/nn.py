@@ -311,7 +311,7 @@ def main(unused_argv):
                 predictions = rawpredictions.argmax(axis=1)
                 print("predictions made")
                 print(predictions)
-                rawname = "rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".txt"
+                rawname = "rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[3]))[0]) + ".txt"
                 rawfile = os.path.join('logs',rawname)
                 with open(rawfile,'w') as fout:
                     for raw,cat,mark in zip(rawpredictions,predictions,markerlabels):
