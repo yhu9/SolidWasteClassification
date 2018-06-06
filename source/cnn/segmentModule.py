@@ -9,6 +9,7 @@ import cv2
 import random
 import math
 import pymeanshift as pms
+import constants
 from matplotlib import pyplot as plt
 ############################################################################################################
 #Flag options for imread are self explanatory
@@ -35,12 +36,9 @@ allimages = {}                          #put all images in this dictionary here 
 #
 # bilateralFilter(src, d, sigmaColor, sigmaSpace)
 
-MIN_DENSITY = 10000
-SPATIAL_RADIUS = 1
-RANGE_RADIUS = 1
-
-WIDTH = 200
-HEIGHT = 200
+MIN_DENSITY = constants.MIN_DENSITY
+SPATIAL_RADIUS = constants.SPATIAL_RADIUS
+RANGE_RADIUS = constants.RANGE_RADIUS
 
 def showSegmentDistribution(original,markers):
     features = []

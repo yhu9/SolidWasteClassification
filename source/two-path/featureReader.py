@@ -118,6 +118,7 @@ def getPixelBatch(n):
     for i,f_list in enumerate(files):
         a = random.randint(0,len(f_list) - 1)
         img1 = cv2.imread(dirs[i] + '/' + f_list[a],cv2.IMREAD_COLOR)
+        images.append(cv2.resize(img1,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation = cv2.INTER_CUBIC))
         images.append(img1)
 
     if(len(images) == len(categories)):

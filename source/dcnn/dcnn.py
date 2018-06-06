@@ -233,9 +233,6 @@ def main(unused_argv):
                         with open(logdir,'a') as log_out:
                             log_out.write('epoch: ' + str(epoch) + '     ' + 'accuracy: ' + str(accnew) + '\n')
 
-                #saver
-                save_path = saver.save(sess,'./pixelmodel/cnn_pixel_model.ckpt')
-                print("Model saved in file: %s" % save_path)
 
         elif(sys.argv[1] == 'trainseg' and len(sys.argv) > 2):
             #check if segmentation file path exists
@@ -279,7 +276,8 @@ def main(unused_argv):
 
             #read the image
             if os.path.isfile(sys.argv[2]):
-                image = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                tmp = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                image = cv2.resize(tmp,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
 
             #restore the graph and make the predictions and show the segmented image
             with tf.Session() as sess:
@@ -295,16 +293,20 @@ def main(unused_argv):
                 count = 0
                 count2 = 0
                 best_guess = np.full((h,w),-1)
+                raw_guess = np.full((h,w,6),0)
                 tmp = []
                 i0 = int(constants.IMG_SIZE / 2)
                 j0 = int(constants.IMG_SIZE / 2)
 
                 #define our log file and pixel segmentation file name
-                logname = "rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".txt"
-                log_file = os.path.join('log',logname)
+                if not os.path.exists('results'):
+                    os.mkdir('results')
+
+
                 imgname = os.path.basename(sys.argv[2])
                 modelname = os.path.dirname(sys.argv[3])
-                seg_file = os.path.splitext(imgname)[0] + '_' + modelname + '_learnedseg' + ".png"
+                logname = "results/rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + '_' + modelname + ".txt"
+                seg_file = 'results/' + os.path.splitext(imgname)[0] + '_' + modelname + '_learnedseg' + ".png"
 
                 #GO THROUGH EACH PIXEL WITHOUT THE EDGES SINCE WE NEED TO MAKE SURE EVERY PART OF THE PIXEL AREA
                 #BEING SENT TO THE MODEL IS PART OF THE IMAGE
@@ -327,16 +329,12 @@ def main(unused_argv):
                             #the original image except all the values are -1
                             for raw,cat in zip(rawpredictions,mask):
                                 best_guess[i0,j0] = cat
+                                raw_guess[i0,j0] = raw
                                 if j0 == (w - int(constants.IMG_SIZE/2)) - 1:
                                     j0 = int(constants.IMG_SIZE / 2)
                                     i0 += 1
                                 else:
                                     j0 += 1
-                                with open(log_file,'a') as fout:
-                                    fout.write(str("cat: " + str(cat) + '    '+ '    raw: '))
-                                    for val in raw:
-                                        fout.write(str(val) + ',')
-                                    fout.write('\n')
 
                             #give console output to show progress
                             outputResults(image,np.array(best_guess),fout=seg_file)
@@ -346,7 +344,7 @@ def main(unused_argv):
                             count2 += 1
                         count += 1
 
-                outputResults(image,np.array(best_guess),fout='pixel_segmentation.png')
+                np.save(logname,raw_guess)
 
         else:
             print("train ")

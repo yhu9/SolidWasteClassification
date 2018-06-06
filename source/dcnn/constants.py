@@ -30,6 +30,7 @@ CNN_CLASSES      = 6
 CNN_EPOCHS       = 1000
 CNN_FULL1   = 500                #Number of features output for fully connected layer1
 IMG_SIZE = 56
+FULL_IMGSIZE = 1000
 IMG_DEPTH   = 3
 KEEP_RATE = 0.85
 BATCH_SIZE = 500
