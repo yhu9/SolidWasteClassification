@@ -135,7 +135,7 @@ def saveSegments(original,labels,out_dir,category,SHOW=False,showbg=False):
 #    threshold2 - second threshold for the hysteresis procedure.
 #    apertureSize - aperture size for the Sobel() operator.
 #    L2gradient - a flag, indicating whether a more accurate L_2 norm =\sqrt{(dI/dx)^2 + (dI/dy)^2} should be used to calculate the image gradient magnitude ( L2gradient=true ), or whether the default L_1 norm =|dI/dx|+|dI/dy| is enough ( L2gradient=false ).
-def getSegments(original, SHOW,sr=SPATIAL_RADIUS,rr=RANGE_RADIUS,md=MIN_DENSITY):
+def getSegments(original, SHOW=False,sr=SPATIAL_RADIUS,rr=RANGE_RADIUS,md=MIN_DENSITY):
     allimages["original"] = original
     ##############################################################################################################
     #gaussian Blur
@@ -217,5 +217,5 @@ def getSegments(original, SHOW,sr=SPATIAL_RADIUS,rr=RANGE_RADIUS,md=MIN_DENSITY)
         cv2.destroyAllWindows()
         cv2.waitKey(-1)
 
-    return original, labels_image
+    return segmented_image, labels_image
 

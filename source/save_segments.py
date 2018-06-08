@@ -3,7 +3,8 @@ import sys
 import os
 import cv2
 
-OUT_DIR = sys.argv[3]
+if len(sys.argv) >= 4:
+    OUT_DIR = sys.argv[3]
 
 #for each image in directory get the segments and save them
 '''
@@ -84,9 +85,9 @@ def rotateImage(img):
     M1 = cv2.getRotationMatrix2D((cols/2,rows/2),90,1)
     M2 = cv2.getRotationMatrix2D((cols/2,rows/2),180,1)
     M3 = cv2.getRotationMatrix2D((cols/2,rows/2),270,1)
-    dst1 = cv2.warpAffine(original,M1,(cols,rows))
-    dst2 = cv2.warpAffine(original,M1,(cols,rows))
-    dst3 = cv2.warpAffine(original,M1,(cols,rows))
+    dst1 = cv2.warpAffine(img,M1,(cols,rows))
+    dst2 = cv2.warpAffine(img,M1,(cols,rows))
+    dst3 = cv2.warpAffine(img,M1,(cols,rows))
 
     return dst1, dst2, dst3
 
@@ -100,7 +101,8 @@ output:
 def multiplyImages(image_dir):
     args = os.listdir(image_dir)
     for f in args:
-        full_dir = image_dir + f
+        full_dir = os.path.join(image_dir, f)
+
 
         original = cv2.imread(full_dir,cv2.IMREAD_COLOR)
 
