@@ -4,29 +4,20 @@ import numpy as np
 import os
 import sys
 
-if len(sys.argv) == 3:
-    dir1 = sys.argv[1]
-    dir2 = sys.argv[2]
+names= ['treematter','plywood','cardboard','black bags','trash bags', 'plastic bottles']
+treematter_mask = [0,0,255]
+plywood_mask = [0,255,0]
+cardboard_mask = [255,0,0]
+blackbag_mask = [255,255,0]
+trashbag_mask = [255,0,255]
+bottles_mask = [0,255,255]
+mask_colors = [treematter_mask,plywood_mask,cardboard_mask,blackbag_mask,trashbag_mask,bottles_mask]
 
-    if os.path.exists(dir1) and os.path.exists(dir2):
-        img = cv2.imread(dir1,cv2.IMREAD_COLOR)
-        gt = cv2.imread(dir2,cv2.IMREAD_COLOR)
-
-        if not os.path.exists('results'):
-            os.makedirs('results')
-
-        treematter_mask = [0,0,255]
-        plywood_mask = [0,255,0]
-        cardboard_mask = [255,0,0]
-        blackbag_mask = [255,255,0]
-        trashbag_mask = [255,0,255]
-        bottles_mask = [0,255,255]
-
-        names= ['treematter','plywood','cardboard','black bags','trash bags', 'plastic bottles']
-        accs = []
-        ratios = []
-
-        for cat,mask in zip(names,[treematter_mask,plywood_mask,cardboard_mask,blackbag_mask,trashbag_mask,bottles_mask]):
+def dice(img,gt,fout='dice_output.txt'):
+    accs = []
+    ratios = []
+    with open(fout,'w') as fo:
+        for cat,mask in zip(names,mask_colors):
             TP = float(np.count_nonzero(np.logical_and(np.all(img == mask,axis=2), np.all(gt == mask,axis=2))))
             TN = float(np.count_nonzero(np.logical_and(np.logical_not(np.all(img == mask,axis=2)), np.logical_not(np.all(gt == mask,axis=2)))))
             FP = float(np.count_nonzero(np.logical_and(np.all(img == mask,axis=2),np.logical_not(np.all(gt == mask,axis=2)))))
@@ -84,33 +75,57 @@ if len(sys.argv) == 3:
             print('DICE: %f' % DICE)
             print('--------------')
 
-            fname = "RESULTS_" + str(os.path.splitext(os.path.basename(sys.argv[1]))[0]) + ".txt"
-            fout = os.path.join('results',fname)
-            with open(fout,'a') as fo:
-                fo.write('--------' + cat + '--------\n\n\n')
-                fo.write('True Positive: %f\n' % TP)
-                fo.write('True Negative: %f\n' % TN)
-                fo.write('False Positive: %f\n' % FP)
-                fo.write('False Negative: %f\n' % FN)
-                fo.write('Positive: %f\n' % P)
-                fo.write('Negative: %f\n\n' % N)
-                fo.write('PRECICSION: %f\n' % PREC)
-                fo.write('SENSITIVITY: %f\n' % SENS)
-                fo.write('SPECIFICITY: %f\n' % SPEC)
-                fo.write('ACCURACY: %f\n' % ACC)
-                fo.write('DICE: %f\n\n\n' % DICE)
+            fo.write('--------' + cat + '--------\n\n\n')
+            fo.write('True Positive: %f\n' % TP)
+            fo.write('True Negative: %f\n' % TN)
+            fo.write('False Positive: %f\n' % FP)
+            fo.write('False Negative: %f\n' % FN)
+            fo.write('Positive: %f\n' % P)
+            fo.write('Negative: %f\n\n' % N)
+            fo.write('PRECICSION: %f\n' % PREC)
+            fo.write('SENSITIVITY: %f\n' % SENS)
+            fo.write('SPECIFICITY: %f\n' % SPEC)
+            fo.write('ACCURACY: %f\n' % ACC)
+            fo.write('DICE: %f\n\n\n' % DICE)
 
         total_acc = 0
         for r,acc in zip(ratios,accs):
             total_acc += r * acc
 
-        with open(fout,'a') as fo:
             print('TOTAL ACCURACY: %f' % total_acc)
             fo.write('TOTAL ACCURACY: %f\n' % total_acc)
             fo.write('---------------------------------------------------\n')
+
+    return total_acc,accs
+
+
+#main function
+if __name__ == '__main__':
+    #maker sure of correct sys args
+    if len(sys.argv) == 3:
+        dir1 = sys.argv[1]
+        dir2 = sys.argv[2]
+
+        #check if directory exists then read the images
+        if os.path.exists(dir1) and os.path.exists(dir2):
+            img = cv2.imread(dir1,cv2.IMREAD_COLOR)
+            gt = cv2.imread(dir2,cv2.IMREAD_COLOR)
+
+            #output to results directory
+            if not os.path.exists('results'):
+                os.makedirs('results')
+
+            #create file name
+            fname = "RESULTS_" + str(os.path.splitext(os.path.basename(sys.argv[1]))[0]) + ".txt"
+            fout = os.path.join('results',fname)
+
+            #apply dice score calculation
+            dice_score, cat_dice = dice(img,gt,fout)
+
+        else:
+            print("PATH DOES NOT EXIST: \n\t%s, \n\t%s" %(sys.argv[1],sys,argv[2]))
+            sys.exit()
     else:
-        sys.exit()
-else:
-    print("wrong number of arguments")
-    print("expecting 2")
+        print("wrong number of arguments")
+        print("expecting 2")
 
