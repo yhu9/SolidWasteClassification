@@ -518,7 +518,7 @@ INPUT:
 OUTPUT:
     1. True
 '''
-def writeFeatures(features, fnameout='output.txt', label=None):
+def writeFeatures(features, fnameout='output', label=None):
 
     if len(features) == 0 or type(features) != type(np.array([])):
         print ("features type: %s" % type(features))
@@ -527,28 +527,10 @@ def writeFeatures(features, fnameout='output.txt', label=None):
         print "error with the input to the extractionModule.writeFeatures()"
         return False
     else:
-        if len(features.shape) == 1:
-            with open(fnameout,'w') as fout:
-                for i,val in enumerate(features):
-                    fout.write(str(val))
-                    if i < len(features) - 1:
-                        fout.write(",")
-                if label is not None:
-                    fout.write("  #%s#" % label)
-                fout.write('\n')
-        elif len(features.shape) == 2:
-            with open(fnameout,'w') as fout:
-                for i,instance in enumerate(features):
-                    for j,val in enumerate(instance):
-                        fout.write(str(val))
-                        if j < len(instance) - 1:
-                            fout.write(",")
-                    if label is not None:
-                        fout.write("  #%s#" % label[i])
-                    fout.write('\n')
-        else:
-            print('unhandled data dimension!')
-            print("please convert data into 1D or 2D array")
+        if label is not None:
+
+            tmp = np.hstack((features,label))
+            np.save(fnameout,tmp)
 
     return True
 
@@ -562,7 +544,4 @@ def displayHistogram(hist,normalize=False):
 def normalize(instances):
     norm_instances = instances.astype(np.float) / np.amax(instances)
     return np.nan_to_num(norm_instances)
-
-
-
 

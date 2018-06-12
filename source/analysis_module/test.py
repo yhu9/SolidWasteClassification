@@ -10,6 +10,7 @@ import extractionModule as analyze
 import numpy as np
 import cv2
 import time
+import re
 import gabor_threads_roi as gabor
 import os
 from multiprocessing import Process
@@ -196,18 +197,18 @@ def display(full_path,SHOWFLAG=True):
 def evaluate_all(full_path,instances):
     #extract features for each image depending on the flag constants
     features = []
-    if sizeflag:
-        features.append(evaluate(full_path,'size',SHOWFLAG=showflag))
-    if hogflag:
-        features.append(evaluate(full_path,'hog',SHOWFLAG=showflag))
-    if gaborflag:
-        features.append(evaluate(full_path,'gabor',SHOWFLAG=showflag))
-    if colorflag:
-        features.append(evaluate(full_path,'color',SHOWFLAG=showflag))
-    if hsvflag:
-        features.append(evaluate(full_path,'hsv',SHOWFLAG=showflag))
     if binflag:
         features.append(evaluate(full_path,'bin',SHOWFLAG=showflag))
+    if colorflag:
+        features.append(evaluate(full_path,'color',SHOWFLAG=showflag))
+    if gaborflag:
+        features.append(evaluate(full_path,'gabor',SHOWFLAG=showflag))
+    if hogflag:
+        features.append(evaluate(full_path,'hog',SHOWFLAG=showflag))
+    if hsvflag:
+        features.append(evaluate(full_path,'hsv',SHOWFLAG=showflag))
+    if sizeflag:
+        features.append(evaluate(full_path,'size',SHOWFLAG=showflag))
 
     #create the full feature vector for the given instance image and push to instances
     #and also push the file name as the label for the instance
@@ -215,7 +216,9 @@ def evaluate_all(full_path,instances):
     for i in range(len(features)):
         full_vector = np.hstack((full_vector,features[i]))
 
-    label = os.path.basename(full_path)
+    #get the label of the instance
+    group = re.findall("treematter|plywood|cardboard|bottles|trashbag|blackbag|mixed",full_path)
+    label = os.path.basename(group[0])
 
     #console output to show progress
     print("%s ---> DONE" % full_path)
@@ -252,11 +255,16 @@ if __name__ == '__main__':
 
             #run all jobs
             tmpcount = 0
+            max_processes = 50
             for filepath in mylist:
                 tmpcount += 1
                 p = Process(target=evaluate_all,args=(filepath,values))
                 jobs.append(p)
                 p.start()
+
+                if tmpcount % max_processes == (max_processes - 1):
+                    for j in jobs:
+                        j.join()
 
             #join all jobs
             for j in jobs:
@@ -264,7 +272,7 @@ if __name__ == '__main__':
 
             #extract feature vector instances and labels separately
             instances = np.array([i[0] for i in values])
-            labels = [i[1] for i in values]
+            labels = [[i[1]] for i in values]
 
             #we have to normalize just the sizes across all instances
             if(sizeflag):
@@ -279,15 +287,15 @@ if __name__ == '__main__':
             #write the data results out to a text file in working directory
             if pcaflag:
                 basedir = os.path.basename(os.path.normpath(sys.argv[1]))
-                featurefile = 'pcafeatures_' + mode_op + "_" + str(basedir) + '.txt'
+                featurefile = 'pcafeatures_' + mode_op + "_" + str(basedir)
                 pcafile = 'pcaanalysis_' + str(basedir) + '.txt'
                 new_instances = analyze.pcaAnalysis(instances,fnameout=pcafile)
                 print("FEATURES REDUCED FROM %i to %i" % (len(instances[0]),len(new_instances[0])))
-                analyze.writeFeatures(new_instances,fnameout=featurefile,label=labels)
+                analyze.writeFeatures(new_instances,fnameout=featurefile,label=np.array(labels))
             else:
                 basedir = os.path.basename(os.path.normpath(sys.argv[1]))
-                featurefile = 'features_' + mode_op + "_" + str(basedir) + '.txt'
-                analyze.writeFeatures(instances,fnameout=featurefile,label=labels)
+                featurefile = 'features_' + mode_op + "_" + str(basedir)
+                analyze.writeFeatures(instances,fnameout=featurefile,label=np.array(labels))
 
         #if user input is a single image apply to image
         elif os.path.isfile(sys.argv[1]):
