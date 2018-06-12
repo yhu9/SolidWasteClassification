@@ -59,17 +59,37 @@ def getBatch(n,instances,labels):
     if n >= len(instances):
         n = len(instances) - 1
         print("batch size is too large for the instances given: %i" % len(instances))
+        sys.exit()
+
     batch = []
     batch_labels = []
 
+    #get a good mix
+    cat1ids, = np.where(np.all(labels == [1,0,0,0,0,0],axis = 1))
+    cat2ids, = np.where(np.all(labels == [0,1,0,0,0,0],axis = 1))
+    cat3ids, = np.where(np.all(labels == [0,0,1,0,0,0],axis = 1))
+    cat4ids, = np.where(np.all(labels == [0,0,0,1,0,0],axis = 1))
+    cat5ids, = np.where(np.all(labels == [0,0,0,0,1,0],axis = 1))
+    cat6ids, = np.where(np.all(labels == [0,0,0,0,0,1],axis = 1))
+
     for i in range(n):
-        index = random.randint(0,(len(instances) - 1))
+        #roll a single dice
+        roll_dice = random.randint(0,5)
+        if roll_dice % 5 == 0:
+            index = random.randint(0,(len(cat1ids) - 1))
+        elif roll_dice % 5 == 1:
+            index = random.randint(0,(len(cat2ids) - 1))
+        elif roll_dice % 5 == 2:
+            index = random.randint(0,(len(cat3ids) - 1))
+        elif roll_dice % 5 == 3:
+            index = random.randint(0,(len(cat4ids) - 1))
+        elif roll_dice % 5 == 4:
+            index = random.randint(0,(len(cat5ids) - 1))
+        elif roll_dice % 5 == 5:
+            index = random.randint(0,(len(cat6ids) - 1))
+
         batch.append(instances[index])
         batch_labels.append(labels[index])
-
-    tmp = list(zip(batch,batch_labels))
-    random.shuffle(tmp)
-    batch,batch_labels = zip(*tmp)
 
     #return the created content
     return np.array(batch),np.array(batch_labels)

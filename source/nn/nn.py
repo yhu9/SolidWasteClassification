@@ -218,44 +218,13 @@ def main(unused_argv):
                 savedir = os.path.join(modelpath,"nn_model.ckpt")
 
                 #separate the instances into its proper categories
-                cat1,cat2,cat3,cat4,cat5,cat6 = [],[],[],[],[],[]
-                lab1,lab2,lab3,lab4,lab5,lab6 = [],[],[],[],[],[]
-                for i,l in zip(new_instances,labels):
-                    if np.array_equal(l, constants.CAT1_ONEHOT):
-                        cat1.append(i)
-                        lab1.append(constants.CAT1_ONEHOT)
-                    elif np.array_equal(l, constants.CAT2_ONEHOT):
-                        cat2.append(i)
-                        lab2.append(constants.CAT2_ONEHOT)
-                    elif np.array_equal(l, constants.CAT3_ONEHOT):
-                        cat3.append(i)
-                        lab3.append(constants.CAT3_ONEHOT)
-                    elif np.array_equal(l, constants.CAT4_ONEHOT):
-                        cat4.append(i)
-                        lab4.append(constants.CAT4_ONEHOT)
-                    elif np.array_equal(l, constants.CAT5_ONEHOT):
-                        cat5.append(i)
-                        lab5.append(constants.CAT5_ONEHOT)
-                    elif np.array_equal(l, constants.CAT6_ONEHOT):
-                        cat6.append(i)
-                        lab6.append(constants.CAT6_ONEHOT)
 
                 #training of the model
                 acc = 0.00;
                 for epoch in range(constants.NN_EPOCHS):
 
                     #get an image batch for each category and train on it
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat1,lab1)
-                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat2,lab2)
-                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat3,lab3)
-                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat4,lab4)
-                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat5,lab5)
-                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,cat6,lab6)
+                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,new_instances,labels)
                     optimizer.run(feed_dict={x: batch_x, y: batch_y})
 
                     #evaluate the model using a test set
@@ -311,7 +280,7 @@ def main(unused_argv):
                 predictions = rawpredictions.argmax(axis=1)
                 print("predictions made")
                 print(predictions)
-                rawname = "rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[3]))[0]) + ".txt"
+                rawname = "rawoutput_" + str(os.path.basename(os.path.abspath(os.path.join(sys.argv[3],'../')))[0]) + ".txt"
                 rawfile = os.path.join('logs',rawname)
                 with open(rawfile,'w') as fout:
                     for raw,cat,mark in zip(rawpredictions,predictions,markerlabels):

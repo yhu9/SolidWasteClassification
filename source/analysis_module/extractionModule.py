@@ -334,9 +334,11 @@ def extractColorHist(imageIn,SHOW):
 
     color = ('b','g','r')
     hist = []
+    zeropix = np.count_nonzero(np.all(imageIn == [0,0,0],axis=2))
     for i,col in enumerate(color):
         series = cv2.calcHist([imageIn],[i],None,[256],[0,256])
-        hist.append(np.ravel(series)[1:])
+        series[0] = series[0] - zeropix
+        hist.append(np.ravel(series))
 
     #show the results
     if(SHOW):
@@ -357,13 +359,15 @@ def extractHSVHist(imageIn,SHOW):
 
     color = ('h','s','v')
     hist = []
+    zeropix = np.count_nonzero(np.all(imageIn == [0,0,0],axis=2))
     for i,col in enumerate(color):
         if col == 'h':
-            series = cv2.calcHist([imageIn],[i],None,[170],[0,170])
+            series = cv2.calcHist([imageIn],[i],None,[180],[0,180])
         else:
             series = cv2.calcHist([imageIn],[i],None,[256],[0,256])
 
-        hist.append(np.ravel(series)[1:])
+        series[0] -= zeropix
+        hist.append(np.ravel(series))
 
     #show the results
     if(SHOW):
@@ -434,7 +438,7 @@ Outputs:
     1. blob size
 '''
 def extractBlobSize(image):
-    blob_size = np.count_nonzero(image != [0,0,0])
+    blob_size = np.count_nonzero(np.all(image != [0,0,0]))
 
     return np.array([blob_size])
 
