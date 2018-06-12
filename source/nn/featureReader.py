@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 #generates the instances and labels for all instances within a text file
 '''
 INPUTS:
-    1. text file containing each instance line by line and the label marked with a #
+    1. npy file containing instances from file[:,:-1] and labels at file[:,-1:]
 OUTPUTS:
     1. instances as 2d numpy array
     2. labels for each instance as 1d numpy array
@@ -25,31 +25,20 @@ def genFromText(filepath):
     labels = []
     instances = np.genfromtxt(filepath,delimiter=',',dtype=np.float)
 
-    with open(filepath, 'r') as fin:
-        lines = fin.read().splitlines()
-        for l in lines:
-            group = re.findall("treematter|plywood|cardboard|bottles|trashbag|blackbag",l)
-            if(group[0] == constants.CAT1):
-                labels.append(constants.CAT1_ONEHOT)
-            elif(group[0] == constants.CAT2):
-                labels.append(constants.CAT2_ONEHOT)
-            elif(group[0] == constants.CAT3):
-                labels.append(constants.CAT3_ONEHOT)
-            elif(group[0] == constants.CAT4):
-                labels.append(constants.CAT4_ONEHOT)
-            elif(group[0] == constants.CAT5):
-                labels.append(constants.CAT5_ONEHOT)
-            elif(group[0] == constants.CAT6):
-                labels.append(constants.CAT6_ONEHOT)
-            else:
-                print('UNHANDLED GROUP: ' + group[0])
-
-    #convert the list of instances and categories into the proper data type
-    categories = np.array(labels)
+    tmp  = np.load(filepath)
+    instances = tmp[:,:-1].astype(float)
+    labels = tmp[:,-1:].astype(str)
+    categories = np.zeros((labels.shape[0],labels.shape[1],constants.NN_CLASSES))
+    categories[labels == 'treematter'] = constants.CAT1_ONEHOT
+    categories[labels == 'plywood'] = constants.CAT2_ONEHOT
+    categories[labels == 'cardboard'] = constants.CAT3_ONEHOT
+    categories[labels == 'bottles'] = constants.CAT4_ONEHOT
+    categories[labels == 'trashbag'] = constants.CAT5_ONEHOT
+    categories[labels == 'blackbag'] = constants.CAT6_ONEHOT
+    categories[labels == 'mixed'] = [0,0,0,0,0,0]
 
     #return the created content
     return instances,categories
-
 
 #inputs are 1d extracted feature vectors
 #labels are one hot
@@ -93,7 +82,6 @@ def getBatch(n,instances,labels):
 
     #return the created content
     return np.array(batch),np.array(batch_labels)
-
 
 #extracts blobs from image using the meanshift algorithm
 '''
