@@ -29,7 +29,8 @@ msflag = 'meanshift' in sys.argv
 msbinflag = 'meanshiftbin' in sys.argv
 fjmsflag = 'fjmeanshift' in sys.argv
 dbscanflag = 'dbscan' in sys.argv
-pcaflag = 'pca' in sys.argv         #haven't implemented yet
+pcaflag = 'pca' in sys.argv
+ldaflag = 'lda' in sys.argv
 
 #############################################################################################################
 #Check system argument length and mode
@@ -97,100 +98,6 @@ def evaluate(full_path,mode,SHOWFLAG=False):
         norm = analyze.normalize(hist)
         return norm
 
-#display different modes
-def display(full_path,SHOWFLAG=True):
-    #check if the image was read in correctly
-    original = cv2.imread(full_path,cv2.IMREAD_COLOR)
-    if original is None:
-        print('invalid image! Could not open: %s' % full_path)
-
-    #if mode is meanshift, apply meanshift
-    elif msflag:
-        image, labels = analyze.meanshift(original)
-        print(labels)
-        if SHOWFLAG:
-            segmentModule.showSegments(image,labels)
-
-    #if mode is meanshiftbin, convert 2d image to 3d using bin method and apply meanshift
-    elif msbinflag:
-        image,labels = analyze.meanshift(original,binning=True)
-        print(labels)
-        if SHOWFLAG:
-            segmentModule.showSegments(image,labels)
-
-    #if mode is fjmeanshift, do fjmeanshift
-    elif fjmsflag:
-        if SHOWFLAG:
-            image,labels = segmentModule.getSegments(original,True)
-        else:
-            image,labels = segmentModule.getSegments(original,False)
-        print(labels)
-
-    #if mode is meanshiftbin, convert 2d image to 3d using bin method and apply meanshift
-    elif dbscanflag:
-        image,labels = analyze.dbscan(original,binning=True)
-        print(labels)
-        if SHOWFLAG:
-            segmentModule.showSegments(image,labels)
-
-    #if mode is size
-    elif sizeflag:
-        combined_filename = sys.argv[1]
-
-        # Generate and save blob size for this blob we assume black as background
-        size = analyze.extractBlobSize(original)
-        print('--------------SIZE---------------')
-        if SHOWFLAG:
-            print(size)
-        return size
-
-    #if mode is hog, show hog feature vector of image
-    elif hogflag:
-        hist = analyze.extractHOG(original,False)
-        featurevector = hist.flatten()
-        norm = analyze.normalize(featurevector)
-        print('-------------HOG----------------')
-        if SHOWFLAG:
-            analyze.displayHistogram(featurevector)
-        return norm
-
-    #if mode is gabor, extract gabor feature from image using several orientations
-    elif gaborflag:
-        orientations = 16
-        filters = gabor.build_filters(orientations)
-        combined_filename = sys.argv[1]
-
-        # Generate and save ALL hogs for this image
-        result = gabor.run_gabor(original, filters, combined_filename, orientations, mode='training')
-        featurevector = result.flatten()[1:]
-        norm = analyze.normalize(featurevector)
-        print('--------------Gabor---------------')
-        if SHOWFLAG:
-            analyze.displayHistogram(featurevector,'r--')
-        return norm
-
-    #if mode is color, show color histogram of image
-    elif colorflag:
-        hist = analyze.extractColorHist(original,False)
-        print('-------------Color----------------')
-        if SHOWFLAG:
-            analyze.displayHistogram(hist)
-        return hist
-
-    elif binflag:
-        hist = analyze.extractbinHist(original,False)
-        norm = analyze.normalize(hist)
-        if SHOWFLAG:
-            analyze.displayHistogram(norm)
-        return norm
-
-    elif hsvflag:
-        hsvimg = cv2.cvtColor(original, cv2.COLOR_BGR2HSV)
-        hist = analyze.extractHSVHist(hsvimg,False)
-        if SHOWFLAG:
-            analyze.displayHistogram(hist)
-
-        return hist
 
 #takes a single image and extracts all features depending on flag constants
 #based on user input
@@ -218,7 +125,10 @@ def evaluate_all(full_path,instances):
 
     #get the label of the instance
     group = re.findall("treematter|plywood|cardboard|bottles|trashbag|blackbag|mixed",full_path)
-    label = os.path.basename(group[0])
+    if(len(group) ==0):
+        label = 'mixed'
+    else:
+        label = os.path.basename(group[0])
 
     #console output to show progress
     print("%s ---> DONE" % full_path)
@@ -255,7 +165,7 @@ if __name__ == '__main__':
 
             #run all jobs
             tmpcount = 0
-            max_processes = 50
+            max_processes = 20
             for filepath in mylist:
                 tmpcount += 1
                 p = Process(target=evaluate_all,args=(filepath,values))
@@ -285,22 +195,18 @@ if __name__ == '__main__':
                     mode_op = mode_op + name
 
             #write the data results out to a text file in working directory
-            if pcaflag:
-                basedir = os.path.basename(os.path.normpath(sys.argv[1]))
-                featurefile = 'pcafeatures_' + mode_op + "_" + str(basedir)
-                pcafile = 'pcaanalysis_' + str(basedir) + '.txt'
-                new_instances = analyze.pcaAnalysis(instances,fnameout=pcafile)
-                print("FEATURES REDUCED FROM %i to %i" % (len(instances[0]),len(new_instances[0])))
-                analyze.writeFeatures(new_instances,fnameout=featurefile,label=np.array(labels))
-            else:
-                basedir = os.path.basename(os.path.normpath(sys.argv[1]))
-                featurefile = 'features_' + mode_op + "_" + str(basedir)
-                analyze.writeFeatures(instances,fnameout=featurefile,label=np.array(labels))
-
-        #if user input is a single image apply to image
-        elif os.path.isfile(sys.argv[1]):
-            #evaluate single image
-            display(sys.argv[1])
+            #we can't do pca before hand because it doesn't save the eigen values which we need for testing a new segment
+            #if pcaflag:
+            #    basedir = os.path.basename(os.path.normpath(sys.argv[1]))
+            #    featurefile = 'pcafeatures_' + mode_op + "_" + str(basedir)
+            #    pcafile = 'pcaanalysis_' + str(basedir) + '.txt'
+            #    new_instances = analyze.pcaAnalysis(instances,fnameout=pcafile)
+            #    print("FEATURES REDUCED FROM %i to %i" % (len(instances[0]),len(new_instances[0])))
+            #    analyze.writeFeatures(new_instances,fnameout=featurefile,label=np.array(labels))
+            #else:
+            basedir = os.path.basename(os.path.normpath(sys.argv[1]))
+            featurefile = 'features_' + mode_op + "_" + str(basedir)
+            analyze.writeFeatures(instances,fnameout=featurefile,label=np.array(labels))
 
     #if less than 3 args given
     else:

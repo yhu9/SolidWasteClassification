@@ -7,10 +7,14 @@
 import cv2
 import numpy as np
 import math
+import constants
+import matplotlib
+import matplotlib.patches as mpatches
 from matplotlib import pyplot as plt
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.cluster import MeanShift
 from sklearn.cluster import estimate_bandwidth
 from sklearn.cluster import DBSCAN
@@ -544,4 +548,228 @@ def displayHistogram(hist,normalize=False):
 def normalize(instances):
     norm_instances = instances.astype(np.float) / np.amax(instances)
     return np.nan_to_num(norm_instances)
+
+#get the PCA analysis and fit it to the featurevector of instances
+def getLDA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
+
+    #all default values except for n_components
+    lda = LDA()
+    lda.fit(featurevector,labels)
+
+    return lda
+
+#get the PCA analysis and fit it to the featurevector of instances
+def getPCA(featurevector,featurelength=constants.DECOMP_LENGTH):
+
+    #http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    #all default values except for n_components
+    pca = PCA(copy=True, iterated_power='auto', n_components=featurelength, random_state=None,
+              svd_solver='auto', tol=0.0, whiten=False)
+
+    #apply pca on the feature vector
+    newfeatures = pca.fit_transform(featurevector)
+
+    return newfeatures, pca
+
+# show the 1st and 2nd component on a graph with labels
+def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
+
+    newfeatures, pca = getPCA(featurevector,featurelength=featurelength)
+
+    print("features reduced from %i to %i" % (len(featurevector[0]),pca.n_components_))
+
+    x = newfeatures[:,0]
+    y = newfeatures[:,1]
+    clabel = np.zeros(labels.shape[0])
+    tmp = labels.reshape((labels.shape[0]))
+    clabel[tmp == 'treematter'] = 0
+    clabel[tmp == 'plywood'] = 1
+    clabel[tmp == 'cardboard'] = 2
+    clabel[tmp == 'bottles'] = 3
+    clabel[tmp == 'trashbag'] = 4
+    clabel[tmp == 'blackbag'] = 5
+
+    colors = ['red','green','blue','yellow','magenta','cyan']
+
+    fig = plt.figure()
+    plt.scatter(x,y,c=clabel,cmap=matplotlib.colors.ListedColormap(colors))
+
+    red_patch = mpatches.Patch(color='red',label='treematter')
+    green_patch = mpatches.Patch(color='green',label='plywood')
+    blue_patch = mpatches.Patch(color='blue',label='cardboard')
+    yellow_patch = mpatches.Patch(color='yellow',label='bottles')
+    magenta_patch = mpatches.Patch(color='magenta',label='trashbag')
+    cyan_patch = mpatches.Patch(color='cyan',label='blackbag')
+    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch])
+
+    plt.show()
+
+# show the 1st and 2nd component on a graph with labels
+def showLDA(featurevector,labels,classes='all',featurelength=constants.DECOMP_LENGTH):
+    #create our color legend
+    colors = ['red','green','blue','yellow','magenta','cyan']
+    allclasses = [0,1,2,3,4,5]
+    tmp = labels.reshape((labels.shape[0]))
+    labelID= np.full(labels.shape[0],-1)
+    labelID[tmp == 'treematter'] = 0
+    labelID[tmp == 'plywood'] = 1
+    labelID[tmp == 'cardboard'] = 2
+    labelID[tmp == 'bottles'] = 3
+    labelID[tmp == 'trashbag'] = 4
+    labelID[tmp == 'blackbag'] = 5
+
+    if classes == 'all':
+        lda = getLDA(featurevector,labelID)
+        newfeatures = lda.transform(featurevector)
+
+        x = newfeatures[:,0]
+        y = newfeatures[:,1]
+    else:
+        tree = 'tree' in classes
+        plywood = 'ply' in classes
+        cardboard = 'cardboard' in classes
+        bottles = 'bottle' in classes
+        trashbag = 'trashbag' in classes
+        blackbag = 'black' in classes
+        flags = [tree,plywood,cardboard,bottles,trashbag,blackbag]
+        names = ['treematter','plywood','cardboard','bottles','trashbag','blackbag']
+
+        tmp_instances = np.empty((0,featurevector.shape[1]))
+        tmp_labels = np.full(labels.shape[0],-1)
+        tmp_colors = []
+        i = 0
+        for flag,cat,col in zip(flags,names,colors):
+            if flag:
+                tmp_instances = np.vstack((tmp_instances,featurevector[tmp == cat]))
+                tmp_labels[tmp == cat] = i
+                tmp_colors.append(col)
+                i += 1
+
+        tmp_labels = tmp_labels[tmp_labels >= 0].astype(int)
+
+        #fit lda on the instances and their labels removing instances without the labels
+        lda = getLDA(tmp_instances,tmp_labels)
+
+        #transform the dataset
+        newfeatures = lda.transform(tmp_instances)
+        if newfeatures.shape[1] >= 2:
+            x = newfeatures[:,0]
+            y = newfeatures[:,1]
+        else:
+            x = newfeatures
+            y = np.zeros(x.shape[0])
+
+        labelID = tmp_labels
+        colors = tmp_colors
+
+    #print out number of features reduced
+    score = lda.score(tmp_instances,labelID)
+    print("LDA SCORE: %f" % score)
+
+    #create our figure
+    fig = plt.figure()
+
+    #scatter the x,y coordinates with our color legend on the labels
+    plt.scatter(x,y,c=labelID,cmap=matplotlib.colors.ListedColormap(colors))
+
+    #show visual legend map on top right of screen
+    red_patch = mpatches.Patch(color='red',label='treematter')
+    green_patch = mpatches.Patch(color='green',label='plywood')
+    blue_patch = mpatches.Patch(color='blue',label='cardboard')
+    yellow_patch = mpatches.Patch(color='yellow',label='bottles')
+    magenta_patch = mpatches.Patch(color='magenta',label='trashbag')
+    cyan_patch = mpatches.Patch(color='cyan',label='blackbag')
+    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch])
+
+    #show plot
+    plt.show()
+
+
+# show the 1st and 2nd component on a graph with labels
+def showLDA2(featurevector,labels,classes='all',featurelength=constants.DECOMP_LENGTH):
+    #create our color legend
+    colors = ['red','green','blue','yellow','magenta','cyan']
+    allclasses = [0,1,2,3,4,5]
+    tmp = labels.reshape((labels.shape[0]))
+    labelID= np.full(labels.shape[0],-1)
+    labelID[tmp == 'treematter'] = 0
+    labelID[tmp == 'plywood'] = 1
+    labelID[tmp == 'cardboard'] = 2
+    labelID[tmp == 'bottles'] = 3
+    labelID[tmp == 'trashbag'] = 4
+    labelID[tmp == 'blackbag'] = 5
+
+    if classes == 'all':
+        lda = getLDA(featurevector,labelID)
+        newfeatures = lda.transform(featurevector)
+
+        x = newfeatures[:,0]
+        y = newfeatures[:,1]
+    else:
+        tree = 'tree' in classes
+        plywood = 'ply' in classes
+        cardboard = 'cardboard' in classes
+        bottles = 'bottle' in classes
+        trashbag = 'trashbag' in classes
+        blackbag = 'black' in classes
+        flags = [tree,plywood,cardboard,bottles,trashbag,blackbag]
+        names = ['treematter','plywood','cardboard','bottles','trashbag','blackbag']
+
+        tmp_labels = np.full(labels.shape[0],-1)
+        tmp_colors = []
+        i = 0
+        for flag,cat,col in zip(flags,names,colors):
+            if flag:
+                tmp_labels[tmp == cat] = i
+                tmp_colors.append(col)
+                i += 1
+
+        tmp_labels[tmp == -1] = i
+        tmp_colors.append(col)
+        tmp_labels = tmp_labels.astype(int)
+
+        #fit lda on the instances and their labels removing instances without the labels
+        lda = getLDA(featurevector,tmp_labels)
+
+        #transform the dataset
+        newfeatures = lda.transform(featurevector)
+        if newfeatures.shape[1] >= 2:
+            x = newfeatures[:,0]
+            y = newfeatures[:,1]
+        else:
+            x = newfeatures
+            y = np.zeros(x.shape[0])
+
+        labelID = tmp_labels
+        colors = tmp_colors
+
+    #print out number of features reduced
+    #score = lda.score(tmp_instances,labelID)
+    #print("LDA SCORE: %f" % score)
+
+    #create our figure
+    fig = plt.figure()
+
+    #scatter the x,y coordinates with our color legend on the labels
+    plt.scatter(x,y,c=labelID,cmap=matplotlib.colors.ListedColormap(colors))
+
+    #show visual legend map on top right of screen
+    red_patch = mpatches.Patch(color='red',label='treematter')
+    green_patch = mpatches.Patch(color='green',label='plywood')
+    blue_patch = mpatches.Patch(color='blue',label='cardboard')
+    yellow_patch = mpatches.Patch(color='yellow',label='bottles')
+    magenta_patch = mpatches.Patch(color='magenta',label='trashbag')
+    cyan_patch = mpatches.Patch(color='cyan',label='blackbag')
+    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch])
+
+    #show plot
+    plt.show()
+
+
+
+
+
+
+
+
 
