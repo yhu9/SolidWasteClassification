@@ -35,7 +35,7 @@ allimages = {}                          #put all images in this dictionary here 
 #
 # bilateralFilter(src, d, sigmaColor, sigmaSpace)
 
-MIN_DENSITY = 10000
+MIN_DENSITY = 1000
 SPATIAL_RADIUS = 5
 RANGE_RADIUS = 5
 

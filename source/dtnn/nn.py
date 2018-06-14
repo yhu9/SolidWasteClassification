@@ -59,6 +59,7 @@ flags = {}
 flags['train'] = 'train' in sys.argv
 flags['test'] = 'test' in sys.argv
 flags['pca'] = 'pca' in sys.argv
+flags['lda'] = 'lda' in sys.argv
 #######################################################################################
 
 #Main Function
@@ -84,9 +85,13 @@ def main(unused_argv):
 
             #check if the pca flag is set so we know the feature count is based on pca or the entire feature length
             if flags['pca']:
-                pca = featureReader.getPCA(instances,featurelength=constants.PCA_LENGTH)
+                pca = featureReader.getPCA(instances,featurelength=constants.DECOMP_LENGTH)
                 featurelength = pca.n_components_
                 print('pca generated')
+            elif flags['lda']:
+                lda = featureReader.getLDA(instances,labels)
+                featurelength = len(lda.classes_) - 1
+                print('lda generated')
             else:
                 featurelength = len(instances[0])
 
@@ -119,6 +124,9 @@ def main(unused_argv):
             #get the pca from the training instances
             if flags['pca']:
                 featurefile = sys.argv[sys.argv.index('pca') + 1]
+                print(sys.argv.index('pca'))
+                print(sys.argv)
+                print(featurefile)
                 if os.path.isfile(featurefile):
                     instances,labels = featureReader.genFromText(featurefile)
                     print("feature file successfully read: %s" % featurefile)
@@ -127,13 +135,28 @@ def main(unused_argv):
                     sys.exit()
 
                 #create the pca from the instances read in during training
-                instances,labels = featureReader.genFromText(featurefile)
-                pca = featureReader.getPCA(instances,featurelength=constants.PCA_LENGTH)
+                pca = featureReader.getPCA(instances)
 
                 #apply pca on the new blobs found
                 new_instances = featureReader.applyPCA(pca,blobinstances)
                 featurelength = pca.n_components_
                 print('pca generated')
+            elif flags['lda']:
+                featurefile = sys.argv[sys.argv.index('lda') + 1]
+                if os.path.isfile(featurefile):
+                    instances,labels = featureReader.genFromText(featurefile)
+                    print("feature file successfully read: %s" % featurefile)
+                else:
+                    print("could not open feature file path: %s" % featurefile)
+                    sys.exit()
+
+                #create the lda from the instances read in during training
+                lda = featureReader.getLDA(instances,labels)
+
+                #apply lda on the new blobs found
+                new_instances = featureReader.applyLDA(lda,blobinstances)
+                featurelength = len(lda.classes_) - 1
+                print('lda generated')
             else:
                 new_instances = blobinstances
                 featurelength = len(blobinstances[0])
@@ -168,11 +191,21 @@ def main(unused_argv):
                 #fullyConnected = tf.nn.dropout(fullyConnected,constants.KEEP_RATE)
             tf.summary.histogram('activation2',fc2)
 
+        #third fully connected layer
+        with tf.name_scope('Fully_Connected_3'):
+            with tf.name_scope('activation3'):
+                weights['w_fc3'] = tf.Variable(tf.random_normal([constants.NN_FULL2,constants.NN_FULL3]))
+                biases['b_fc3'] = tf.Variable(tf.random_normal([constants.NN_FULL3]))
+                layer_3 = tf.add(tf.matmul(fc2,weights['w_fc3']),biases['b_fc3'])
+                fc3= tf.nn.relu(layer_3)
+                #fullyConnected = tf.nn.dropout(fullyConnected,constants.KEEP_RATE)
+            tf.summary.histogram('activation3',fc3)
+
         #Final fully connected layer for classification
         with tf.name_scope('output'):
-            weights['out'] = tf.Variable(tf.random_normal([constants.NN_FULL2,constants.NN_CLASSES]))
+            weights['out'] = tf.Variable(tf.random_normal([constants.NN_FULL3,constants.NN_CLASSES]))
             biases['out'] = tf.Variable(tf.random_normal([constants.NN_CLASSES]))
-            predictions = tf.matmul(fc2,weights['out'])+biases['out']
+            predictions = tf.matmul(fc3,weights['out'])+biases['out']
 
         #define optimization and accuracy creation
         with tf.name_scope('cost'):
@@ -208,8 +241,12 @@ def main(unused_argv):
                 if flags['pca']:
                     modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_pcamodel"
                     logdir = "logs/log_"+modelpath+".txt"
-                    new_instances = featureReader.applyPCA(pca,instances,log_dir=logdir)
+                    new_instances = featureReader.applyPCA(pca,instances)
                     print('features reduced from %i to %i' % (len(instances[0]),pca.n_components_))
+                elif flags['lda']:
+                    modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_LDAmodel"
+                    logdir = "logs/log_"+modelpath+".txt"
+                    new_instances = featureReader.applyLDA(lda,instances)
                 else:
                     new_instances = instances
                     modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_model"

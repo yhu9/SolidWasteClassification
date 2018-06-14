@@ -9,6 +9,7 @@ import scipy.misc
 import extractionModule as analyze
 import sys
 from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from segmentModule import *
 from matplotlib import pyplot as plt
 
@@ -23,12 +24,11 @@ OUTPUTS:
 def genFromText(filepath):
 
     labels = []
-    instances = np.genfromtxt(filepath,delimiter=',',dtype=np.float)
 
     tmp  = np.load(filepath)
     instances = tmp[:,:-1].astype(float)
     labels = tmp[:,-1:].astype(str)
-    categories = np.zeros((labels.shape[0],labels.shape[1],constants.NN_CLASSES))
+    categories = np.zeros((labels.shape[0],1,constants.NN_CLASSES))
     categories[labels == 'treematter'] = constants.CAT1_ONEHOT
     categories[labels == 'plywood'] = constants.CAT2_ONEHOT
     categories[labels == 'cardboard'] = constants.CAT3_ONEHOT
@@ -38,7 +38,7 @@ def genFromText(filepath):
     categories[labels == 'mixed'] = [0,0,0,0,0,0]
 
     #return the created content
-    return instances,categories
+    return instances,categories.reshape(labels.shape[0],constants.NN_CLASSES)
 
 #inputs are 1d extracted feature vectors
 #labels are one hot
@@ -133,9 +133,9 @@ OUTPUTS:
 '''
 def createTestingInstancesFromImage(image,hsvseg=False,hog=False,color=False,gabor=False,size=False,hsv=False,filename="unsupervised_segmentation.png"):
     #segment the image and extract blobs
-    print("extracting blobs")
+    print("finding blobs")
     blobs,markers,labels = extractBlobs(image,fout=filename,hsv=hsvseg)
-
+    print("BLOBS FOUND!")
     #evaluate each blob and extract features from them
     tmp = []
     for i,blob in enumerate(blobs):
@@ -219,38 +219,56 @@ def outputResults(image,mask,fout='segmentation.png'):
         else:
             f.write("\nsorry something went wrong counting the predictions")
 
+#get the PCA analysis and fit it to the featurevector of instances
+def getLDA(featurevector,labels):
+    lda_labels = np.empty((labels.shape[0]))
+    lda_labels[np.all(labels == [1,0,0,0,0,0],axis=1) == 1] = 0
+    lda_labels[np.all(labels == [0,1,0,0,0,0],axis=1) == 1] = 1
+    lda_labels[np.all(labels == [0,0,1,0,0,0],axis=1) == 1] = 2
+    lda_labels[np.all(labels == [0,0,0,1,0,0],axis=1) == 1] = 3
+    lda_labels[np.all(labels == [0,0,0,0,1,0],axis=1) == 1] = 4
+    lda_labels[np.all(labels == [0,0,0,0,0,1],axis=1) == 1] = 5
+
+    #all default values except for n_components
+    lda = LDA()
+    lda.fit(featurevector,lda_labels)
+
+    return lda
+
+#get the PCA analysis and fit it to the featurevector of instances
+def getPCA(featurevector,featurelength=constants.DECOMP_LENGTH):
+
+    #http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+    #all default values except for n_components
+    pca = PCA(copy=True, iterated_power='auto', n_components=featurelength, random_state=None,
+              svd_solver='auto', tol=0.0, whiten=False)
+
+    #apply pca on the feature vector
+    newfeatures = pca.fit(featurevector)
+
+    return pca
+
 #applies the pca singular values on a feature vector and returns the results
-def applyPCA(pca,inputfeatures,log_dir='dump.txt'):
+def applyPCA(pca,inputfeatures):
 
     if len(inputfeatures.shape) == 1:
         newfeatures = pca.transform(inputfeatures.reshape(1,len(inputfeatures)))
     else:
+        print(inputfeatures.shape)
         newfeatures = pca.transform(inputfeatures)
-
-    with open(log_dir,'a') as fout:
-        fout.write("\n1. -------------------------------------------------------------------------------------------\n")
-        fout.write(str(pca.n_components_))
-        fout.write("\n\n")
-        fout.write("2. -------------------------------------------------------------------------------------------\n")
-        fout.write(str(pca.explained_variance_ratio_))
-        fout.write("\n\n")
-        fout.write("3. -------------------------------------------------------------------------------------------\n")
-        fout.write("feature length: " + str(len(inputfeatures[0])) + "      reduced length: " + str(len(newfeatures[0])))
-        fout.write("\n\n")
 
     return newfeatures
 
-#get the PCA analysis and fit it to the featurevector of instances
-def getPCA(featurevector,featurelength=constants.PCA_LENGTH):
 
-    #http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-    #all default values except for n_components
-    pca = PCA(copy=True, iterated_power='auto', n_components=constants.PCA_LENGTH, random_state=None,
-              svd_solver='auto', tol=0.0, whiten=False)
+def applyLDA(lda,inputfeatures):
+    if len(inputfeatures.shape) == 1:
+        newfeatures = lda.transform(inputfeatures.reshape(1,len(inputfeatures)))
+    else:
+        newfeatures = lda.transform(inputfeatures)
 
-    #apply pca on the feature vector
-    pca.fit(featurevector)
+    print('LDA applied to %i categories' % len(lda.classes_))
 
-    return pca
+    return newfeatures
+
 
 
