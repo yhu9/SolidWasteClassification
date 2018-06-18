@@ -142,7 +142,7 @@ if __name__ == '__main__':
 
         #if user input is a single image apply to image
         if os.path.isfile(sys.argv[1]) and os.path.splitext(sys.argv[1])[1] == '.npy':
-            tmp = np.load(sys.argv[1])
+            tmp = np.load(sys.argv[1],mmap_mode='r')
             instances  = tmp[:,:-1].astype(float)
             labels = tmp[:,-1:].astype(str)
 
@@ -156,9 +156,9 @@ if __name__ == '__main__':
 
     #if less than 3 args given
     else:
-        print "wrong number of files as arguments expecting 3:"
-        print "argv1 = image file/directory"
-        print "argv2 + = modes of operation"
+        print("wrong number of files as arguments expecting 3:")
+        print("argv1 = image file/directory")
+        print("argv2 + = modes of operation")
         sys.exit()
 
     #find out execution time

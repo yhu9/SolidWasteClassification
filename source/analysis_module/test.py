@@ -13,6 +13,8 @@ import time
 import re
 import gabor_threads_roi as gabor
 import os
+import gc
+import pickle
 from multiprocessing import Process
 from multiprocessing import Manager
 ################################################################################################
@@ -125,10 +127,22 @@ def evaluate_all(full_path,instances):
 
     #get the label of the instance
     group = re.findall("treematter|plywood|cardboard|bottles|trashbag|blackbag|mixed",full_path)
-    if(len(group) ==0):
+    if(len(group) == 0):
         label = 'mixed'
-    else:
-        label = os.path.basename(group[0])
+    elif(group[0] == 'treematter'):
+        label = 0
+    elif(group[0] == 'plywood'):
+        label = 1
+    elif(group[0] == 'cardboard'):
+        label = 2
+    elif(group[0] == 'bottles'):
+        label = 3
+    elif(group[0] == 'trashbag'):
+        label = 4
+    elif(group[0] == 'blackbag'):
+        label = 5
+    elif(group[0] == 'mixed'):
+        label = -1
 
     #console output to show progress
     print("%s ---> DONE" % full_path)
@@ -144,75 +158,100 @@ def evaluate_all(full_path,instances):
 #######################################################################################################################
 if __name__ == '__main__':
 
-    if len(sys.argv) >= 3:
+    #if user input is a directory apply to all images in directory
+    if len(sys.argv) >= 3 and os.path.isdir(sys.argv[1]):
+        #figure out what features were processed during the whole thing and name the file appropriately
+        mode_op = ""
+        for flag,name in zip([sizeflag,hogflag,gaborflag,colorflag,hsvflag],['size','hog','gabor','color','hsv']):
+            if flag:
+                mode_op = mode_op + name
+        basedir = os.path.basename(os.path.normpath(sys.argv[1]))
+        featurefile = 'features_' + mode_op + "_" + str(basedir)
 
-        #if user input is a directory apply to all images in directory
-        if os.path.isdir(sys.argv[1]):
-            #initialize list of instances
-            instances = []
-            labels = []
-            count = 1
-            myfiles = os.listdir(sys.argv[1])
-            dircount = len(myfiles)
+        #initialize list of instances
+        instances = []
+        labels = []
+        count = 1
+        myfiles = os.listdir(sys.argv[1])
+        dircount = len(myfiles)
 
-            #prepend the file directory so we have a list of full file directories to supply to the evaluate_all() function
-            mylist = [os.path.join(sys.argv[1],f) for f in myfiles]
+        #prepend the file directory so we have a list of full file directories to supply to the evaluate_all() function
+        mylist = [os.path.join(sys.argv[1],f) for f in myfiles]
 
-            #multi process the images in mylist of files through a shared variable of the manager class
-            manager = Manager()
-            values = manager.list()
-            jobs = []
+        #multi process the images in mylist of files through a shared variable of the manager class
+        manager = Manager()
+        values = manager.list()
+        jobs = []
 
-            #run all jobs
-            tmpcount = 0
-            max_processes = 40
-            for filepath in mylist:
-                tmpcount += 1
-                p = Process(target=evaluate_all,args=(filepath,values))
-                jobs.append(p)
-                p.start()
+        #run all jobs
+        tmpcount = 0
+        max_processes = 100
+        for filepath in mylist:
+            tmpcount += 1
+            p = Process(target=evaluate_all,args=(filepath,values))
+            jobs.append(p)
+            p.start()
 
-                if tmpcount % max_processes == (max_processes - 1):
-                    for j in jobs:
-                        j.join()
+            if tmpcount % max_processes == (max_processes - 1):
+                for j in jobs:
+                    j.join()
 
-            #join all jobs
-            for j in jobs:
-                j.join()
+        #join all jobs
+        for j in jobs:
+            j.join()
 
-            #extract feature vector instances and labels separately
-            instances = np.array([i[0] for i in values])
-            labels = [[i[1]] for i in values]
+        #extract feature vector instances and labels separately
+        instances = np.array([i[0] for i in values])
+        labels = np.array([[i[1]] for i in values])
+        del values
+        del jobs
+        gc.collect()
 
-            #we have to normalize just the sizes across all instances
-            if(sizeflag):
-                instances[:,0] = analyze.normalize(instances[:,0])
+        #we have to normalize just the sizes across all instances
+        if(sizeflag):
+            instances[:,0] = analyze.normalize(instances[:,0])
 
-            #figure out what features were processed during the whole thing and name the file appropriately
-            mode_op = ""
-            for flag,name in zip([sizeflag,hogflag,gaborflag,colorflag,hsvflag],['size','hog','gabor','color','hsv']):
-                if flag:
-                    mode_op = mode_op + name
+        #apply feature reductions as necessary
+#http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+        if(pcaflag):
+            featurefile = featurefile + '_pca'
+            if not os.path.isdir(featurefile):
+                os.makedirs(featurefile)
+            pca_out = os.path.join(featurefile,featurefile + '.sav')
+            instances, pca = analyze.getPCA(instances)
+            pickle.dump(pca, open(pca_out,'wb'))
+            featurefile = os.path.join(featurefile,featurefile)
+#http://scikit-learn.org/stable/modules/generated/sklearn.discriminant_analysis.LinearDiscriminantAnalysis.html#sklearn.discriminant_analysis.LinearDiscriminantAnalysis
+        elif(ldaflag):
+            featurefile = featurefile + '_lda'
+            if not os.path.isdir(featurefile):
+                os.makedirs(featurefile)
 
-            #write the data results out to a text file in working directory
-            #we can't do pca before hand because it doesn't save the eigen values which we need for testing a new segment
-            #if pcaflag:
-            #    basedir = os.path.basename(os.path.normpath(sys.argv[1]))
-            #    featurefile = 'pcafeatures_' + mode_op + "_" + str(basedir)
-            #    pcafile = 'pcaanalysis_' + str(basedir) + '.txt'
-            #    new_instances = analyze.pcaAnalysis(instances,fnameout=pcafile)
-            #    print("FEATURES REDUCED FROM %i to %i" % (len(instances[0]),len(new_instances[0])))
-            #    analyze.writeFeatures(new_instances,fnameout=featurefile,label=np.array(labels))
-            #else:
-            basedir = os.path.basename(os.path.normpath(sys.argv[1]))
-            featurefile = 'features_' + mode_op + "_" + str(basedir)
-            analyze.writeFeatures(instances,fnameout=featurefile,label=np.array(labels))
+            lda_out = os.path.join(featurefile,featurefile + '.sav')
+            lda = analyze.getLDA(instances,labels.reshape(labels.shape[0]))
+            pickle.dump(lda,open(lda_out,'wb'))
+            featurefile = os.path.join(featurefile,featurefile)
+        else:
+            if not os.path.isdir(featurefile):
+                os.makedirs(featurefile)
+                featurefile = os.path.join(featurefile,featurefile)
+
+        #write the instances and labels as one file
+        analyze.writeFeatures(instances,fnameout=featurefile,label=np.array(labels))
+
+    #if user input is a directory apply to all images in directory
+    elif len(sys.argv) == 3 and sys.argv[1] == 'split':
+        print("wrong number of files as arguments expecting 3:")
+        print("argv1 = image file/directory")
+        print("argv2 + = modes of operation")
+        sys.exit()
+
 
     #if less than 3 args given
     else:
-        print "wrong number of files as arguments expecting 3:"
-        print "argv1 = image file/directory"
-        print "argv2 + = modes of operation"
+        print ("wrong number of files as arguments expecting 3:")
+        print ("argv1 = image file/directory")
+        print ("argv2 + = modes of operation")
         sys.exit()
 
     #find out execution time

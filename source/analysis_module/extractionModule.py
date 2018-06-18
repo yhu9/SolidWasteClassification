@@ -10,6 +10,7 @@ import math
 import constants
 import matplotlib
 import matplotlib.patches as mpatches
+import gc
 from matplotlib import pyplot as plt
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
@@ -554,7 +555,7 @@ def getLDA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
 
     #all default values except for n_components
     lda = LDA()
-    lda.fit(featurevector,labels)
+    lda.fit(featurevector[labels >= 0],labels[labels >= 0])
 
     return lda
 
@@ -605,62 +606,33 @@ def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
     plt.show()
 
 # show the 1st and 2nd component on a graph with labels
-def showLDA(featurevector,labels,classes='all',featurelength=constants.DECOMP_LENGTH):
+def showLDA(featurevector,labels,classes='all',mode='trash'):
     #create our color legend
     colors = ['red','green','blue','yellow','magenta','cyan']
     allclasses = [0,1,2,3,4,5]
     tmp = labels.reshape((labels.shape[0]))
-    labelID= np.full(labels.shape[0],-1)
-    labelID[tmp == 'treematter'] = 0
-    labelID[tmp == 'plywood'] = 1
-    labelID[tmp == 'cardboard'] = 2
-    labelID[tmp == 'bottles'] = 3
-    labelID[tmp == 'trashbag'] = 4
-    labelID[tmp == 'blackbag'] = 5
 
-    if classes == 'all':
-        lda = getLDA(featurevector,labelID)
-        newfeatures = lda.transform(featurevector)
+    #-1 is mixed blobs
+    labelID = np.full(labels.shape[0],-1)
 
-        x = newfeatures[:,0]
-        y = newfeatures[:,1]
-    else:
-        tree = 'tree' in classes
-        plywood = 'ply' in classes
-        cardboard = 'cardboard' in classes
-        bottles = 'bottle' in classes
-        trashbag = 'trashbag' in classes
-        blackbag = 'black' in classes
-        flags = [tree,plywood,cardboard,bottles,trashbag,blackbag]
-        names = ['treematter','plywood','cardboard','bottles','trashbag','blackbag']
+    if mode == 'binary':
+        labelID[tmp == 0] = 0
+        labelID[tmp == 1] = 1
+    elif mode == 'trash':
+        labelID[tmp == 'treematter'] = 0
+        labelID[tmp == 'plywood'] = 1
+        labelID[tmp == 'cardboard'] = 2
+        labelID[tmp == 'bottles'] = 3
+        labelID[tmp == 'trashbag'] = 4
+        labelID[tmp == 'blackbag'] = 5
 
-        tmp_instances = np.empty((0,featurevector.shape[1]))
-        tmp_labels = np.full(labels.shape[0],-1)
-        tmp_colors = []
-        i = 0
-        for flag,cat,col in zip(flags,names,colors):
-            if flag:
-                tmp_instances = np.vstack((tmp_instances,featurevector[tmp == cat]))
-                tmp_labels[tmp == cat] = i
-                tmp_colors.append(col)
-                i += 1
+    lda = getLDA(featurevector[labelID >= 0],labelID[labelID >= 0])
+    print('lda acquired')
+    newfeatures = lda.transform(featurevector)
+    print('new features extracted')
 
-        tmp_labels = tmp_labels[tmp_labels >= 0].astype(int)
-
-        #fit lda on the instances and their labels removing instances without the labels
-        lda = getLDA(tmp_instances,tmp_labels)
-
-        #transform the dataset
-        newfeatures = lda.transform(tmp_instances)
-        if newfeatures.shape[1] >= 2:
-            x = newfeatures[:,0]
-            y = newfeatures[:,1]
-        else:
-            x = newfeatures
-            y = np.zeros(x.shape[0])
-
-        labelID = tmp_labels
-        colors = tmp_colors
+    x = newfeatures[:,0]
+    y = newfeatures[:,1]
 
     #print out number of features reduced
     score = lda.score(tmp_instances,labelID)
@@ -683,7 +655,6 @@ def showLDA(featurevector,labels,classes='all',featurelength=constants.DECOMP_LE
 
     #show plot
     plt.show()
-
 
 # show the 1st and 2nd component on a graph with labels
 def showLDA2(featurevector,labels,classes='all',featurelength=constants.DECOMP_LENGTH):
