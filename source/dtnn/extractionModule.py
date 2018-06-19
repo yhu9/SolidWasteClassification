@@ -109,9 +109,6 @@ def extractHOG(imageIn, SHOW):
     new_w = int(int((int(w) / 16.0) + 1 ) * 16)
     new_h = int(int((int(h) / 16.0) + 1 ) * 16)
 
-    print(h,w)
-    print(new_w,new_h)
-
     #resize the image to 64 x 128
     resized = cv2.resize(imageIn,(int(new_w), int(new_h)), interpolation = cv2.INTER_CUBIC)
 

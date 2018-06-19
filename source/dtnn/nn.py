@@ -24,6 +24,7 @@ import cv2
 import math
 import sys
 import os
+import pickle
 
 #Python Modules
 import constants
@@ -58,8 +59,8 @@ tf.logging.set_verbosity(tf.logging.INFO)
 flags = {}
 flags['train'] = 'train' in sys.argv
 flags['test'] = 'test' in sys.argv
-flags['pca'] = 'pca' in sys.argv
-flags['lda'] = 'lda' in sys.argv
+flags['pca'] = False
+flags['lda'] = False
 #######################################################################################
 
 #Main Function
@@ -84,16 +85,7 @@ def main(unused_argv):
                 sys.exit()
 
             #check if the pca flag is set so we know the feature count is based on pca or the entire feature length
-            if flags['pca']:
-                pca = featureReader.getPCA(instances,featurelength=constants.DECOMP_LENGTH)
-                featurelength = pca.n_components_
-                print('pca generated')
-            elif flags['lda']:
-                lda = featureReader.getLDA(instances,labels)
-                featurelength = len(lda.classes_) - 1
-                print('lda generated')
-            else:
-                featurelength = len(instances[0])
+            featurelength = len(instances[0])
 
         #if we are testing the model on new instances
         elif flags['test']:
@@ -114,47 +106,16 @@ def main(unused_argv):
             hsvflag = 'hsv' in tokens[0]
             hsvsegflag = 'hsvseg' in tokens[1]
 
-            #extract the testing instances from the image
-            #look at the model naming convention to see what features we are extracting
-            fout = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
-            blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,hsv=hsvflag,filename=fout)
-            print("features extracted")
-
             #apply pca on the instances
             #get the pca from the training instances
             if flags['pca']:
                 featurefile = sys.argv[sys.argv.index('pca') + 1]
-                print(sys.argv.index('pca'))
-                print(sys.argv)
-                print(featurefile)
-                if os.path.isfile(featurefile):
-                    instances,labels = featureReader.genFromText(featurefile)
-                    print("feature file successfully read: %s" % featurefile)
-                else:
-                    print("could not open feature file path: %s" % featurefile)
-                    sys.exit()
-
-                #create the pca from the instances read in during training
-                pca = featureReader.getPCA(instances)
-
-                #apply pca on the new blobs found
-                new_instances = featureReader.applyPCA(pca,blobinstances)
+                pca = pickle.load(pca
                 featurelength = pca.n_components_
                 print('pca generated')
             elif flags['lda']:
                 featurefile = sys.argv[sys.argv.index('lda') + 1]
-                if os.path.isfile(featurefile):
-                    instances,labels = featureReader.genFromText(featurefile)
-                    print("feature file successfully read: %s" % featurefile)
-                else:
-                    print("could not open feature file path: %s" % featurefile)
-                    sys.exit()
-
-                #create the lda from the instances read in during training
-                lda = featureReader.getLDA(instances,labels)
-
-                #apply lda on the new blobs found
-                new_instances = featureReader.applyLDA(lda,blobinstances)
+                lda = pickle.load(lda
                 featurelength = len(lda.classes_) - 1
                 print('lda generated')
             else:
@@ -236,28 +197,15 @@ def main(unused_argv):
                 sess.run(init)
                 merged = tf.summary.merge_all()
 
-
                 #apply pca on the instances extracted from the feature file
-                if flags['pca']:
-                    modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_pcamodel"
-                    logdir = "logs/log_"+modelpath+".txt"
-                    new_instances = featureReader.applyPCA(pca,instances)
-                    print('features reduced from %i to %i' % (len(instances[0]),pca.n_components_))
-                elif flags['lda']:
-                    modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_LDAmodel"
-                    logdir = "logs/log_"+modelpath+".txt"
-                    new_instances = featureReader.applyLDA(lda,instances)
-                else:
-                    new_instances = instances
-                    modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_model"
-                    logdir = "logs/log_"+modelpath+".txt"
+                new_instances = instances
+                modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_model"
+                logdir = "logs/log_"+modelpath+".txt"
 
                 #create and figure out where we save the information to
                 if not os.path.exists(modelpath):
                     os.makedirs(modelpath)
                 savedir = os.path.join(modelpath,"nn_model.ckpt")
-
-                #separate the instances into its proper categories
 
                 #training of the model
                 acc = 0.00;
@@ -314,6 +262,16 @@ def main(unused_argv):
                 sess.run(init)
                 saver.restore(sess,ckpt_dir)
                 print("session restored!")
+
+                #extract the testing instances from the image
+                #look at the model naming convention to see what features we are extracting
+                fout = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
+                blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,hsv=hsvflag,filename=fout)
+
+
+
+                print("features extracted")
+
 
                 #run the instances extracted on the learned model and get raw and max prediction
                 rawpredictions = predictions.eval({x:new_instances})

@@ -66,11 +66,14 @@ def process_threaded(img, filters):
     def f(kern):
         return cv2.filter2D(img, cv2.CV_8UC3, kern)
 
-    pool = ThreadPool(processes=8)
+    pool = ThreadPool(processes=4)
     for fimg in pool.map(f, filters):
         kernal_results[kern_index, :, :] = fimg  # Put the image into an array we can use it outside
         kern_index += 1
         np.maximum(combined, fimg, combined)
+    pool.close()
+    pool.join()
+
     return combined, kernal_results
 
 

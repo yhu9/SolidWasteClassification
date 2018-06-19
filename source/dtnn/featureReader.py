@@ -27,15 +27,15 @@ def genFromText(filepath):
 
     tmp  = np.load(filepath)
     instances = tmp[:,:-1].astype(float)
-    labels = tmp[:,-1:].astype(str)
+    labels = tmp[:,-1:].astype(np.int8)
     categories = np.zeros((labels.shape[0],1,constants.NN_CLASSES))
-    categories[labels == 'treematter'] = constants.CAT1_ONEHOT
-    categories[labels == 'plywood'] = constants.CAT2_ONEHOT
-    categories[labels == 'cardboard'] = constants.CAT3_ONEHOT
-    categories[labels == 'bottles'] = constants.CAT4_ONEHOT
-    categories[labels == 'trashbag'] = constants.CAT5_ONEHOT
-    categories[labels == 'blackbag'] = constants.CAT6_ONEHOT
-    categories[labels == 'mixed'] = [0,0,0,0,0,0]
+    categories[labels == 0] = constants.CAT1_ONEHOT     #Treematter
+    categories[labels == 1] = constants.CAT2_ONEHOT     #plywood
+    categories[labels == 2] = constants.CAT3_ONEHOT     #cardboard
+    categories[labels == 3] = constants.CAT4_ONEHOT     #bottles
+    categories[labels == 4] = constants.CAT5_ONEHOT     #trashbag
+    categories[labels == 5] = constants.CAT6_ONEHOT     #blackbag
+    categories[labels == -1] = [0,0,0,0,0,0]            #mixed
 
     #return the created content
     return instances,categories.reshape(labels.shape[0],constants.NN_CLASSES)
@@ -143,7 +143,6 @@ def createTestingInstancesFromImage(image,hsvseg=False,hog=False,color=False,gab
         #console output to show progress
         print("%i of blob %i ---> FEATURES EXTRACTED" % (i + 1, len(blobs)))
         tmp.append(featurevector)
-
     #create numpy array
     instances = np.array(tmp)
 
@@ -219,7 +218,7 @@ def outputResults(image,mask,fout='segmentation.png'):
         else:
             f.write("\nsorry something went wrong counting the predictions")
 
-#get the PCA analysis and fit it to the featurevector of instances
+#get the LDA analysis and fit it to the featurevector of instances
 def getLDA(featurevector,labels):
     lda_labels = np.empty((labels.shape[0]))
     lda_labels[np.all(labels == [1,0,0,0,0,0],axis=1) == 1] = 0
@@ -228,10 +227,11 @@ def getLDA(featurevector,labels):
     lda_labels[np.all(labels == [0,0,0,1,0,0],axis=1) == 1] = 3
     lda_labels[np.all(labels == [0,0,0,0,1,0],axis=1) == 1] = 4
     lda_labels[np.all(labels == [0,0,0,0,0,1],axis=1) == 1] = 5
+    lda_labels[np.all(labels == [0,0,0,0,0,0],axis=1) == 1] = -1
 
     #all default values except for n_components
     lda = LDA()
-    lda.fit(featurevector,lda_labels)
+    lda.fit(featurevector[lda_labels >= 0],lda_labels[lda_labels >= 0])
 
     return lda
 
