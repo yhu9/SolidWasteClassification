@@ -47,23 +47,19 @@ def evaluate(full_path,mode,SHOWFLAG=False):
         print('invalid image! Could not open: %s' % full_path)
 
     #if mode is size
+    #print('--------------SIZE---------------')
     if mode == 'size':
         combined_filename = sys.argv[1]
 
         # Generate and save blob size for this blob we assume black as background
         size = analyze.extractBlobSize(original)
-        #print('--------------SIZE---------------')
         return size
 
     #if mode is hog, show hog feature vector of image
+    #print('-------------HOG----------------')
     elif mode == 'hog':
         hist = analyze.extractHOG(original,False)
-        featurevector = hist.flatten()
-        norm = analyze.normalize(featurevector)
-        #print('-------------HOG----------------')
-        if SHOWFLAG:
-            analyze.displayHistogram(featurevector)
-        return norm
+        return hist
 
     #if mode is gabor, extract gabor feature from image using several orientations
     elif mode == 'gabor':
@@ -75,19 +71,14 @@ def evaluate(full_path,mode,SHOWFLAG=False):
         result = gabor.run_gabor(original, filters, combined_filename, orientations, mode='training')
         featurevector = result.flatten()[1:]
         norm = analyze.normalize(featurevector)
-        #print('--------------Gabor---------------')
-        if SHOWFLAG:
-            analyze.displayHistogram(featurevector,'r--')
+
         return norm
 
     #if mode is color, show color histogram of image
+    #print('-------------Color----------------')
     elif mode == 'color':
         hist = analyze.extractColorHist(original,False)
-        #print('-------------Color----------------')
-        norm = analyze.normalize(hist)
-        if SHOWFLAG:
-            analyze.displayHistogram(hist)
-        return norm
+        return hist
 
     elif mode == 'bin':
         hist = analyze.extractbinHist(original,False)
@@ -97,8 +88,7 @@ def evaluate(full_path,mode,SHOWFLAG=False):
     elif mode == 'hsv':
         hsvimg = cv2.cvtColor(original, cv2.COLOR_BGR2HSV)
         hist = analyze.extractHSVHist(hsvimg,False)
-        norm = analyze.normalize(hist)
-        return norm
+        return hist
 
 
 #takes a single image and extracts all features depending on flag constants
@@ -184,7 +174,7 @@ if __name__ == '__main__':
         #run all jobs
         tmpcount = 0
         max_processes = 100
-        for filepath in mylist:
+        for filepath in mylist[:20000]:
             tmpcount += 1
             p = Process(target=evaluate_all,args=(filepath,values))
             jobs.append(p)
@@ -232,7 +222,7 @@ if __name__ == '__main__':
         else:
             if not os.path.isdir(featurefile):
                 os.makedirs(featurefile)
-                featurefile = os.path.join(featurefile,featurefile)
+            featurefile = os.path.join(featurefile,featurefile)
 
         #write the instances and labels as one file
         analyze.writeFeatures(instances,fnameout=featurefile,label=np.array(labels))

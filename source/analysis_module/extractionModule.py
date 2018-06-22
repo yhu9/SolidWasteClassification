@@ -359,7 +359,7 @@ def extractColorHist(imageIn,SHOW):
         plt.show()
 
     #lop off black and white
-    return np.concatenate(np.array(hist))
+    return normalize(np.concatenate(np.array(hist)))
 
 #According to http://stackoverflow.com/questions/17063042/why-do-we-convert-from-rgb-to-hsv/17063317
 #HSV is better for object recognition compared to BGR
@@ -388,7 +388,7 @@ def extractHSVHist(imageIn,SHOW):
         plt.show()
 
     #lop off black and white
-    return np.concatenate(np.array(hist))
+    return normalize(np.concatenate(np.array(hist)))
 
 #extract the edge distribution from the image segment
 def extractHOG(imageIn, SHOW):
@@ -428,7 +428,6 @@ def extractHOG(imageIn, SHOW):
     for i in range(len(hist)):
         feature[i % (nbins)] += hist[i]
     feature_hist = np.array(feature)
-    feature_hist = feature / np.amax(feature)
 
     #show the results of the HOG distribution for the section
     if(SHOW):
@@ -438,7 +437,8 @@ def extractHOG(imageIn, SHOW):
         plt.draw()
         plt.show()
 
-    return feature_hist
+    norm = normalize(feature_hist.ravel())
+    return norm
 
 
 #get the blob size from the blob
@@ -449,7 +449,7 @@ Outputs:
     1. blob size
 '''
 def extractBlobSize(image):
-    blob_size = np.count_nonzero(np.all(image != [0,0,0]))
+    blob_size = np.count_nonzero(np.all(image != [0,0,0],axis=2))
 
     return np.array([blob_size])
 
@@ -571,8 +571,7 @@ def getPCA(featurevector,featurelength=constants.DECOMP_LENGTH):
 
     #http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
     #all default values except for n_components
-    pca = PCA(copy=True, iterated_power='auto', n_components=featurelength, random_state=None,
-                  svd_solver='auto', tol=0.0, whiten=False)
+    pca = PCA(n_components=featurelength)
 
     #apply pca on the feature vector
     newfeatures = pca.fit_transform(featurevector)
@@ -594,12 +593,12 @@ def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH,pcaobject
     y = newfeatures[:,1]
     clabel = np.zeros(labels.shape[0])
     tmp = labels.reshape((labels.shape[0]))
-    clabel[tmp == 'treematter'] = 0
-    clabel[tmp == 'plywood'] = 1
-    clabel[tmp == 'cardboard'] = 2
-    clabel[tmp == 'bottles'] = 3
-    clabel[tmp == 'trashbag'] = 4
-    clabel[tmp == 'blackbag'] = 5
+    clabel[tmp == 0] = 0
+    clabel[tmp == 1] = 1
+    clabel[tmp == 2] = 2
+    clabel[tmp == 3] = 3
+    clabel[tmp == 4] = 4
+    clabel[tmp == 5] = 5
 
     colors = ['red','green','blue','yellow','magenta','cyan']
 
@@ -754,5 +753,90 @@ def showLDA2(featurevector,labels,classes='all',featurelength=constants.DECOMP_L
 
     #show plot
     plt.show()
+
+
+#takes a single image and extracts all features depending on flag constants
+#based on user input
+'''
+INPUTS:
+    1. segment of type numpy array
+    2. (optional) hogflag  of type bool
+    3. (optional) gaborflag of type bool
+    4. (optional) colorflag of type bool
+OUTPUTS:
+    1. feature vector
+'''
+def evaluateSegment(segment,hogflag=False,gaborflag=False,colorflag=False,sizeflag=False,hsvflag=False):
+    #extract features for each image depending on the flag constants
+    features = []
+
+    if colorflag:
+        features.append(evaluate(segment,'color'))
+    if gaborflag:
+        features.append(evaluate(segment,'gabor'))
+    if hogflag:
+        features.append(evaluate(segment,'hog'))
+    if hsvflag:
+        features.append(evaluate(segment,'hsv'))
+    if sizeflag:
+        features.append(evaluate(segment,'size'))
+
+    #create the full feature vector for the given instance image and push to instances
+    #and also push the file name as the label for the instance
+    full_vector = np.array([])
+    for i in range(len(features)):
+        full_vector = np.hstack((full_vector,features[i]))
+
+    return full_vector
+
+#EVALUATE AN IMAGE GIVEN THE MODE
+def evaluate(original,mode,SHOWFLAG=False):
+    #check if the image was read in correctly
+    if original is None:
+        print('invalid image! Could not open image')
+
+    #if mode is size we have to normalize this later across all instances
+    if mode == 'size':
+        combined_filename = sys.argv[1]
+
+        # Generate and save blob size for this blob we assume black as background
+        size = extractBlobSize(original)
+        #print('--------------SIZE---------------')
+        return size
+
+    #if mode is hog, show hog feature vector of image
+    elif mode == 'hog':
+        hist = extractHOG(original,False)
+        featurevector = hist.flatten()
+        norm = normalize(featurevector)
+        return norm
+
+    #if mode is color, show color histogram of image
+    elif mode == 'color':
+        hist = extractColorHist(original,False)
+        norm = normalize(hist)
+        #print('-------------Color----------------')
+        #print(norm)
+        return norm
+
+    #if mode is gabor, extract gabor feature from image using several orientations
+    elif mode == 'gabor':
+        orientations = 16
+        filters = gabor.build_filters(orientations)
+        combined_filename = sys.argv[1]
+
+        # Generate and save ALL hogs for this image
+        result = gabor.run_gabor(original, filters, combined_filename, orientations, mode='training')
+        featurevector = result.flatten()[1:]
+        norm = normalize(featurevector)
+        #print('--------------Gabor---------------')
+        #print(norm)
+        return norm
+
+    elif mode == 'hsv':
+        hsvimg = cv2.cvtColor(original, cv2.COLOR_BGR2HSV)
+        hist = extractHSVHist(hsvimg,False)
+        norm = normalize(hist)
+        return norm
 
 
