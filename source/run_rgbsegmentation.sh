@@ -18,14 +18,8 @@ python save_segments.py save $PLYWOOD_DIR $OUT_DIR1 &
 python save_segments.py save $BOTTLES_DIR $OUT_DIR1 &
 python save_segments.py save $BLACKBAG_DIR $OUT_DIR1 &
 python save_segments.py save $TRASHBAG_DIR $OUT_DIR1 &
-
-mkdir $OUT_DIR2
-python save_segments.py save $CARDBOARD_DIR $OUT_DIR2 showbg &
-python save_segments.py save $TREEMATTER_DIR $OUT_DIR2 showbg &
-python save_segments.py save $PLYWOOD_DIR $OUT_DIR2 showbg &
-python save_segments.py save $BOTTLES_DIR $OUT_DIR2 showbg &
-python save_segments.py save $BLACKBAG_DIR $OUT_DIR2 showbg &
-python save_segments.py save $TRASHBAG_DIR $OUT_DIR2 showbg &
+#python save_segments.py save $MIXED_DIR $OUT_DIR1 &
+#python save_segments.py rotate $OUT_DIR1
 
 wait
 

@@ -1,10 +1,11 @@
 import sys
-import segmentModule
+import segmentModule as seg
 import extractionModule as analyze
 import numpy as np
 import cv2
 import time
 import re
+import pickle
 import gabor_threads_roi as gabor
 import os
 
@@ -20,6 +21,7 @@ hsvflag = 'hsv' in sys.argv
 msflag = 'meanshift' in sys.argv
 msbinflag = 'meanshiftbin' in sys.argv
 fjmsflag = 'fjmeanshift' in sys.argv
+qsflag = 'quickshift' in sys.argv
 dbscanflag = 'dbscan' in sys.argv
 pcaflag = 'pca' in sys.argv
 ldaflag = 'lda' in sys.argv
@@ -30,37 +32,41 @@ start_time = time.time()
 
 #display different modes
 def display(original,labels=None,SHOWFLAG=True):
-    if original is None:
-        print('invalid image! Could not open: %s' % full_path)
 
     #if mode is meanshift, apply meanshift
-    elif msflag:
+    if msflag:
         image, labels = analyze.meanshift(original)
         print(labels)
         if SHOWFLAG:
-            segmentModule.showSegments(image,labels)
+            seg.showSegments(image,labels)
 
     #if mode is meanshiftbin, convert 2d image to 3d using bin method and apply meanshift
     elif msbinflag:
         image,labels = analyze.meanshift(original,binning=True)
         print(labels)
         if SHOWFLAG:
-            segmentModule.showSegments(image,labels)
+            seg.showSegments(image,labels)
 
     #if mode is fjmeanshift, do fjmeanshift
     elif fjmsflag:
         if SHOWFLAG:
-            image,labels = segmentModule.getSegments(original,True)
+            image,labels = seg.getSegments(original,True)
         else:
-            image,labels = segmentModule.getSegments(original,False)
+            image,labels = seg.getSegments(original,False)
         print(labels)
+
+    #if mode is fjmeanshift, do fjmeanshift
+    elif qsflag:
+        labels = analyze.quickmeanshift(original)
+        if SHOWFLAG:
+            seg.showSegments(original,labels)
 
     #if mode is meanshiftbin, convert 2d image to 3d using bin method and apply meanshift
     elif dbscanflag:
         image,labels = analyze.dbscan(original,binning=True)
         print(labels)
         if SHOWFLAG:
-            segmentModule.showSegments(image,labels)
+            seg.showSegments(image,labels)
 
     #if mode is size
     elif sizeflag:
@@ -122,7 +128,6 @@ def display(original,labels=None,SHOWFLAG=True):
         return hist
 
 
-
 def scatter(instances,labels):
     if pcaflag:
         analyze.showPCA(instances,labels)
@@ -133,26 +138,37 @@ def scatter(instances,labels):
             option = sys.argv[optionID]
             analyze.showLDA2(instances,labels,classes=option)
         else:
-            analyze.showLDA(instances,labels)
+            analyze.showLDA(instances,labels,mode='int')
 
 
 if __name__ == '__main__':
 
     if len(sys.argv) >= 2:
 
-        #if user input is a single image apply to image
-        if os.path.isfile(sys.argv[1]) and os.path.splitext(sys.argv[1])[1] == '.npy':
-            tmp = np.load(sys.argv[1],mmap_mode='r')
-            instances  = tmp[:,:-1].astype(float)
-            labels = tmp[:,-1:].astype(str)
+        #if user input is doing lda or pca
+        if os.path.isfile(sys.argv[1]) and (ldaflag or pcaflag):
+
+            if os.path.splitext(sys.argv[1])[1] == '.npy':
+                tmp = np.load(sys.argv[1],mmap_mode='r')
+                instances = tmp[:,:-1].astype(float)
+                labels = tmp[:,-1:].astype(int)
+            elif os.path.isfile(sys.argv[2]):
+                img = cv2.imread(sys.argv[1],cv2.IMREAD_COLOR)
+                mask = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                seg_image,labels = seg.getSegments(img,False)
 
             scatter(instances,labels)
 
+        #if user input to visuzlize is an image file
         else:
             #evaluate single image
             #check if the image was read in correctly
-            original = cv2.imread(full_path,cv2.IMREAD_COLOR)
-            display(sys.argv[1])
+            if os.path.isfile(sys.argv[1]):
+                original = cv2.imread(sys.argv[1],cv2.IMREAD_COLOR)
+                display(original)
+            else:
+                print('invalid image! Could not open: %s' % sys.argv[1])
+                quit()
 
     #if less than 3 args given
     else:

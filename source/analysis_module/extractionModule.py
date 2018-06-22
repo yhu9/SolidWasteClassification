@@ -14,6 +14,7 @@ import gc
 from matplotlib import pyplot as plt
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
+from skimage.segmentation import quickshift
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.cluster import MeanShift
@@ -230,6 +231,11 @@ def dbscan(image,binning=False):
 
     return image,label_image
 
+def quickmeanshift(image):
+    mask = quickshift(image)
+
+    return mask
+
 #reduces rgb dimension into single dimension using bins
 #just for my sanity sake i made this because I thought it might be very cool to see
 #http://scikit-learn.org/stable/modules/generated/sklearn.cluster.MeanShift.html
@@ -367,7 +373,7 @@ def extractHSVHist(imageIn,SHOW):
     zeropix = np.count_nonzero(np.all(imageIn == [0,0,0],axis=2))
     for i,col in enumerate(color):
         if col == 'h':
-            series = cv2.calcHist([imageIn],[i],None,[180],[0,180])
+            series = cv2.calcHist([imageIn],[i],None,[170],[0,170])
         else:
             series = cv2.calcHist([imageIn],[i],None,[256],[0,256])
 
@@ -555,6 +561,7 @@ def getLDA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
 
     #all default values except for n_components
     lda = LDA()
+
     lda.fit(featurevector[labels >= 0],labels[labels >= 0])
 
     return lda
@@ -565,7 +572,7 @@ def getPCA(featurevector,featurelength=constants.DECOMP_LENGTH):
     #http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
     #all default values except for n_components
     pca = PCA(copy=True, iterated_power='auto', n_components=featurelength, random_state=None,
-              svd_solver='auto', tol=0.0, whiten=False)
+                  svd_solver='auto', tol=0.0, whiten=False)
 
     #apply pca on the feature vector
     newfeatures = pca.fit_transform(featurevector)
@@ -573,9 +580,13 @@ def getPCA(featurevector,featurelength=constants.DECOMP_LENGTH):
     return newfeatures, pca
 
 # show the 1st and 2nd component on a graph with labels
-def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
+def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH,pcaobject=None):
 
-    newfeatures, pca = getPCA(featurevector,featurelength=featurelength)
+    if pcaobject == None:
+        newfeatures, pca = getPCA(featurevector,featurelength=featurelength)
+    else:
+        pca = pcaobject
+        newfeatures = pca.transform(featurevector)
 
     print("features reduced from %i to %i" % (len(featurevector[0]),pca.n_components_))
 
@@ -606,7 +617,7 @@ def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
     plt.show()
 
 # show the 1st and 2nd component on a graph with labels
-def showLDA(featurevector,labels,classes='all',mode='trash'):
+def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
     #create our color legend
     colors = ['red','green','blue','yellow','magenta','cyan']
     allclasses = [0,1,2,3,4,5]
@@ -618,25 +629,33 @@ def showLDA(featurevector,labels,classes='all',mode='trash'):
     if mode == 'binary':
         labelID[tmp == 0] = 0
         labelID[tmp == 1] = 1
-    elif mode == 'trash':
+    elif mode == 'string':
         labelID[tmp == 'treematter'] = 0
         labelID[tmp == 'plywood'] = 1
         labelID[tmp == 'cardboard'] = 2
         labelID[tmp == 'bottles'] = 3
         labelID[tmp == 'trashbag'] = 4
         labelID[tmp == 'blackbag'] = 5
+    elif mode == 'int':
+        labelID[tmp == 0] = 0
+        labelID[tmp == 1] = 1
+        labelID[tmp == 2] = 2
+        labelID[tmp == 3] = 3
+        labelID[tmp == 4] = 4
+        labelID[tmp == 5] = 5
 
-    lda = getLDA(featurevector[labelID >= 0],labelID[labelID >= 0])
+    if ldaobject == None:
+        lda = getLDA(featurevector[labelID >= 0],labelID[labelID >= 0])
+        newfeatures = lda.transform(featurevector)
+    else:
+        lda = ldaobject
+        newfeatures = lda.transform(featurevector)
+
     print('lda acquired')
-    newfeatures = lda.transform(featurevector)
     print('new features extracted')
 
     x = newfeatures[:,0]
     y = newfeatures[:,1]
-
-    #print out number of features reduced
-    score = lda.score(tmp_instances,labelID)
-    print("LDA SCORE: %f" % score)
 
     #create our figure
     fig = plt.figure()
@@ -735,12 +754,5 @@ def showLDA2(featurevector,labels,classes='all',featurelength=constants.DECOMP_L
 
     #show plot
     plt.show()
-
-
-
-
-
-
-
 
 
