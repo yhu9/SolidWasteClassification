@@ -174,7 +174,7 @@ if __name__ == '__main__':
         #run all jobs
         tmpcount = 0
         max_processes = 100
-        for filepath in mylist[:20000]:
+        for filepath in mylist:
             tmpcount += 1
             p = Process(target=evaluate_all,args=(filepath,values))
             jobs.append(p)

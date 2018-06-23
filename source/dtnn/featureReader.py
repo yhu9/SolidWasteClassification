@@ -8,6 +8,7 @@ import constants
 import scipy.misc
 import extractionModule as analyze
 import sys
+import pickle
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from segmentModule import *
@@ -148,7 +149,7 @@ def createTestingInstancesFromImage(image,hsvseg=False,hog=False,color=False,gab
 
     #normalize the sizes across all blobs
     if size:
-        instances[:,0] = analyze.normalize(instances[:,0])
+        instances[:,-1] = analyze.normalize(instances[:,-1])
 
     return instances, markers, labels
 
@@ -269,6 +270,35 @@ def applyLDA(lda,inputfeatures):
     print('LDA applied to %i categories' % len(lda.classes_))
 
     return newfeatures
+
+def loadPCA(filename):
+    with open(filename,'rb') as f:
+        pca = pickle.load(f,encoding='latin1')
+
+    return pca
+
+def loadLDA(filename):
+    with open(filename,'rb') as f:
+        lda = pickle.load(f,encoding='latin1')
+
+    return lda
+
+
+if __name__ == '__main__':
+
+    if len(sys.argv) == 3:
+        if sys.argv[1] == 'pca':
+            featurefile = sys.argv[2]
+            features,labels = genFromText(featurefile)
+            pca = getPCA(features)
+            pickle.dump(pca,open(os.path.splitext(os.path.basename(featurefile))[0] + '_pca.pkl','wb'))
+
+        elif sys.argv[1] == 'lda':
+            featurefile = sys.argv[2]
+            features,labels = genFromText(featurefile)
+            lda = getLDA(features,labels)
+            pickle.dump(lda,open(os.path.splitext(os.path.basename(featurefile))[0] + '_lda.pkl','wb'))
+
 
 
 

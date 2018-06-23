@@ -59,8 +59,9 @@ tf.logging.set_verbosity(tf.logging.INFO)
 flags = {}
 flags['train'] = 'train' in sys.argv
 flags['test'] = 'test' in sys.argv
-flags['pca'] = False
-flags['lda'] = False
+flags['test2'] = 'test2' in sys.argv
+flags['pca'] = 'pca' in sys.argv
+flags['lda'] = 'lda' in sys.argv
 #######################################################################################
 
 #Main Function
@@ -80,42 +81,78 @@ def main(unused_argv):
             if os.path.isfile(featurefile):
                 instances,labels = featureReader.genFromText(featurefile)
                 print("feature file successfully read: %s" % featurefile)
+
+                #if appplying pca
+                if flags['pca']:
+                    pca = featureReader.getPCA(instances)
+                    new_instances = pca.transform(instances)
+                    pickle.dump(pca,open(os.path.splitext(os.path.basename(featurefile))[0] + '_pca.pkl','wb'))
+
+                #if appplying lda
+                elif flags['lda']:
+                    lda = featureReader.getLDA(instances,labels)
+                    new_instances = lda.transform(instances)
+                    pickle.dump(lda,open(os.path.splitext(os.path.basename(featurefile))[0] + '_lda.pkl','wb'))
+
+                #if doing normal training
+                else:
+                    new_instances = instances
             else:
                 print("could not open feature file path: %s" % featurefile)
                 sys.exit()
 
             #check if the pca flag is set so we know the feature count is based on pca or the entire feature length
-            featurelength = len(instances[0])
+            featurelength = len(new_instances[0])
 
         #if we are testing the model on new instances
-        elif flags['test']:
-            #read the image from the image file
-            if os.path.isfile(sys.argv[2]):
-                image = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
-            else:
-                print("image could not be read!")
-                sys.exit()
+        elif flags['test'] or flags['test2']:
 
             #model name
             modelpath = sys.argv[3]
             tokens = modelpath.split('_')
-            hogflag = 'hog' in tokens[0]
-            gaborflag = 'gabor' in tokens[0]
-            colorflag = 'color' in tokens[0]
-            sizeflag = 'size' in tokens[0]
-            hsvflag = 'hsv' in tokens[0]
-            hsvsegflag = 'hsvseg' in tokens[1]
+            hogflag = 'hog' in tokens[1]
+            gaborflag = 'gabor' in tokens[1]
+            colorflag = 'color' in tokens[1]
+            sizeflag = 'size' in tokens[1]
+            hsvflag = 'hsv' in tokens[1]
+            hsvsegflag = 'hsvseg' in tokens[2]
+
+            #extract the testing instances from the image
+            #look at the model naming convention to see what features we are extracting
+            #read the image from the image file
+            if flags['test']:
+                if os.path.isfile(sys.argv[2]):
+                    image = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                    ms_out = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
+                    blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,hsv=hsvflag,filename=ms_out)
+                else:
+                    print("image could not be read!")
+                    sys.exit()
+                print('hog: %s' % hogflag)
+                print('gabor: %s' % gaborflag)
+                print('color: %s' % colorflag)
+                print('size: %s' % sizeflag)
+                print('hsv: %s' % hsvflag)
+                print('hsvseg: %s' % hsvsegflag)
+            elif flags['test2']:
+                if os.path.isfile(sys.argv[2]):
+                    blobinstances,labels = featureReader.genFromText(sys.argv[2])
+                else:
+                    print('npy file could not be read!')
+                    sys.exit()
 
             #apply pca on the instances
             #get the pca from the training instances
             if flags['pca']:
-                featurefile = sys.argv[sys.argv.index('pca') + 1]
-                pca = pickle.load(pca
+                pcaID = sys.argv.index('pca') + 1
+                pca = featureReader.loadPCA(sys.argv[pcaID])
+                new_instances = pca.transform(blobinstances)
                 featurelength = pca.n_components_
                 print('pca generated')
             elif flags['lda']:
-                featurefile = sys.argv[sys.argv.index('lda') + 1]
-                lda = pickle.load(lda
+                ldaID = sys.argv.index('lda') + 1
+                lda = featureReader.loadLDA(sys.argv[ldaID])
+                new_instances = lda.transform(blobinstances)
                 featurelength = len(lda.classes_) - 1
                 print('lda generated')
             else:
@@ -170,7 +207,7 @@ def main(unused_argv):
 
         #define optimization and accuracy creation
         with tf.name_scope('cost'):
-            cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=predictions,labels=y))
+            cost = tf.nn.softmax_cross_entropy_with_logits_v2(logits=predictions,labels=y)
         with tf.name_scope('optimizer'):
             optimizer = tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost)
         with tf.name_scope('accuracy'):
@@ -198,8 +235,12 @@ def main(unused_argv):
                 merged = tf.summary.merge_all()
 
                 #apply pca on the instances extracted from the feature file
-                new_instances = instances
-                modelpath = os.path.splitext(os.path.basename(featurefile))[0][9:] + "_model"
+                modelpath = os.path.splitext(os.path.basename(featurefile))[0] + "_model"
+                if flags['lda']:
+                    modelpath += '_lda'
+                elif flags['pca']:
+                    modelpath += '_pca'
+
                 logdir = "logs/log_"+modelpath+".txt"
 
                 #create and figure out where we save the information to
@@ -263,16 +304,6 @@ def main(unused_argv):
                 saver.restore(sess,ckpt_dir)
                 print("session restored!")
 
-                #extract the testing instances from the image
-                #look at the model naming convention to see what features we are extracting
-                fout = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
-                blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,hsv=hsvflag,filename=fout)
-
-
-
-                print("features extracted")
-
-
                 #run the instances extracted on the learned model and get raw and max prediction
                 rawpredictions = predictions.eval({x:new_instances})
                 predictions = rawpredictions.argmax(axis=1)
@@ -280,6 +311,7 @@ def main(unused_argv):
                 print(predictions)
                 rawname = "rawoutput_" + str(os.path.basename(os.path.abspath(os.path.join(sys.argv[3],'../')))[0]) + ".txt"
                 rawfile = os.path.join('logs',rawname)
+
                 with open(rawfile,'w') as fout:
                     for raw,cat,mark in zip(rawpredictions,predictions,markerlabels):
                         fout.write(str("cat: " + str(cat) + '    mark: ' + str(mark) + '    raw: '))
@@ -301,6 +333,21 @@ def main(unused_argv):
                 featureReader.outputResults(image,np.array(best_guess),fout=fileout)
 
                 print("segmentation results successfully saved to %s" % fileout)
+
+        elif flags['test2']:
+            with tf.Session() as sess:
+                #get the directory of the checkpoint
+                ckpt_dir = sys.argv[3]
+                sess.run(init)
+                saver.restore(sess,ckpt_dir)
+                print("session restored!")
+
+                for i in range(6):
+                    eval_x,eval_y = featureReader.getBatch(600,new_instances,labels)
+                    accnew = accuracy.eval({x: eval_x, y: eval_y})
+                    print("TRIAL %i         ACCURACY: %.4f" % (i,accnew))
+
+
 
         elif sys.argv[1] == 'debug':
 

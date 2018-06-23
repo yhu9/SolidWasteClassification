@@ -10,11 +10,11 @@ import math
 import constants
 import matplotlib
 import matplotlib.patches as mpatches
+import gabor_threads_roi as gabor
 import gc
 from matplotlib import pyplot as plt
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
-from skimage.segmentation import quickshift
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.cluster import MeanShift
@@ -535,7 +535,7 @@ def writeFeatures(features, fnameout='output', label=None):
         print ("features type: %s" % type(features))
         print ("expected type: %s" % type(np.array([])))
         print ("length features: %i" % len(features))
-        print "error with the input to the extractionModule.writeFeatures()"
+        print ("error with the input to the extractionModule.writeFeatures()")
         return False
     else:
         if label is not None:
@@ -599,8 +599,9 @@ def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH,pcaobject
     clabel[tmp == 3] = 3
     clabel[tmp == 4] = 4
     clabel[tmp == 5] = 5
+    clabel[tmp == -1] = 6
 
-    colors = ['red','green','blue','yellow','magenta','cyan']
+    colors = ['red','green','blue','yellow','magenta','cyan','black']
 
     fig = plt.figure()
     plt.scatter(x,y,c=clabel,cmap=matplotlib.colors.ListedColormap(colors))
@@ -611,15 +612,16 @@ def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH,pcaobject
     yellow_patch = mpatches.Patch(color='yellow',label='bottles')
     magenta_patch = mpatches.Patch(color='magenta',label='trashbag')
     cyan_patch = mpatches.Patch(color='cyan',label='blackbag')
-    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch])
+    black_patch = mpatches.Patch(color='black',label='mixed')
+    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch,black_patch])
 
     plt.show()
 
 # show the 1st and 2nd component on a graph with labels
 def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
     #create our color legend
-    colors = ['red','green','blue','yellow','magenta','cyan']
-    allclasses = [0,1,2,3,4,5]
+    colors = ['red','green','blue','yellow','magenta','cyan','black']
+    allclasses = [0,1,2,3,4,5,6]
     tmp = labels.reshape((labels.shape[0]))
 
     #-1 is mixed blobs
@@ -635,6 +637,7 @@ def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
         labelID[tmp == 'bottles'] = 3
         labelID[tmp == 'trashbag'] = 4
         labelID[tmp == 'blackbag'] = 5
+        labelID[tmp == 'mixed'] = 6
     elif mode == 'int':
         labelID[tmp == 0] = 0
         labelID[tmp == 1] = 1
@@ -642,9 +645,10 @@ def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
         labelID[tmp == 3] = 3
         labelID[tmp == 4] = 4
         labelID[tmp == 5] = 5
+        labelID[tmp == -1] = 6
 
     if ldaobject == None:
-        lda = getLDA(featurevector[labelID >= 0],labelID[labelID >= 0])
+        lda = getLDA(featurevector[labelID < 6],labelID[labelID < 6])
         newfeatures = lda.transform(featurevector)
     else:
         lda = ldaobject
@@ -669,7 +673,8 @@ def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
     yellow_patch = mpatches.Patch(color='yellow',label='bottles')
     magenta_patch = mpatches.Patch(color='magenta',label='trashbag')
     cyan_patch = mpatches.Patch(color='cyan',label='blackbag')
-    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch])
+    black_patch = mpatches.Patch(color='black',label='mixed')
+    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch,black_patch])
 
     #show plot
     plt.show()

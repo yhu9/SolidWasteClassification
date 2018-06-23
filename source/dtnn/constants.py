@@ -31,7 +31,6 @@ NN_EPOCHS       = 1000
 NN_FULL1   = 200                #Number of features output for fully connected layer1
 NN_FULL2   = 200                #Number of features output for fully connected layer1
 NN_FULL3   = 200                #Number of features output for fully connected layer1
-IMG_SIZE = 56
 IMG_DEPTH   = 3
 KEEP_RATE = 0.85
 BATCH_SIZE = 1000
