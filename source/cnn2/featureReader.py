@@ -6,6 +6,9 @@ import re
 import math
 import constants
 import scipy.misc
+import pywt
+from skimage.feature import hog
+from skimage import exposure
 from segmentModule import *
 from matplotlib import pyplot as plt
 
@@ -77,8 +80,22 @@ def getBatch(n,catname='mixed'):
                 box_high1 = int(a + (constants.IMG_SIZE / 2))
                 box_high2 = int(b + (constants.IMG_SIZE / 2))
 
+                #get rgb
                 box = img[box_low1:box_high1,box_low2:box_high2]
+
+                #get hog
+                cellsize = (int(constants.IMG_SIZE / 3),int(constants.IMG_SIZE / 3))
+                fd, hog_image = hog(box, orientations=8, pixels_per_cell=cellsize,cells_per_block=(1, 1), visualize=True, multichannel=True)
+
+                #get WT
+                gray = cv2.cvtColor(box,cv2.COLOR_BGR2GRAY)
+                wt = extractWT(gray)
+
+                #box
+                box = np.concatenate((box,hog_image.reshape((hog_image.shape[0],hog_image.shape[1],1))),axis=-1)
+                box = np.concatenate((box,wt.reshape((wt.shape[0],wt.shape[1],1))),axis=-1)
                 inputs.append(box)
+
                 labels.append(categories[i])
 
     #if a category is chosen label is binary
@@ -88,11 +105,16 @@ def getBatch(n,catname='mixed'):
         for i,f in enumerate(files):
             img = cv2.imread(f,cv2.IMREAD_COLOR)
             w, h, d = img.shape
+
+            #even out the training between the label and the others
             if i == index:
                 k = 1
             else:
                 k = constants.CLASSES
+
+            #get pixel instances
             for j in range(int(n/k)):
+                #pick a random point
                 low = int(constants.IMG_SIZE / 2)
                 high = int(w - (constants.IMG_SIZE / 2) - 1)
                 a = random.randint(low,high)
@@ -102,8 +124,23 @@ def getBatch(n,catname='mixed'):
                 box_high1 = int(a + (constants.IMG_SIZE / 2))
                 box_high2 = int(b + (constants.IMG_SIZE / 2))
 
-                box = img[box_low1:box_high1,box_low2:box_high2]
+                #get rgb
+                box = img[box_low1:box_high1,box_low2:box_high2,:]
+
+                #get hog
+                cellsize = (int(constants.IMG_SIZE / 3),int(constants.IMG_SIZE / 3))
+                fd, hog_image = hog(box, orientations=8, pixels_per_cell=cellsize,cells_per_block=(1, 1), visualize=True, multichannel=True)
+
+                #get WT
+                gray = cv2.cvtColor(box,cv2.COLOR_BGR2GRAY)
+                wt = extractWT(gray)
+
+                #concatenate each channel and push it to the inputs
+                box = np.concatenate((box,hog_image.reshape((hog_image.shape[0],hog_image.shape[1],1))),axis=-1)
+                box = np.concatenate((box,wt.reshape((wt.shape[0],wt.shape[1],1))),axis=-1)
                 inputs.append(box)
+
+                #push the label of the input
                 if i == index:
                     labels.append([1])
                 else:
@@ -113,7 +150,61 @@ def getBatch(n,catname='mixed'):
     c = list(zip(inputs,labels))
     random.shuffle(c)
     inputs,labels = zip(*c)
+    inputs = np.array(inputs)
+    labels = np.array(labels)
 
     #return as batch size to get normal distribution
-    return np.array(inputs)[:n],np.array(labels)[:n]
+    return inputs,labels
+
+def extractWT(image):
+    #convert to float
+    imArray =  np.float32(image)
+    imArray /= 255;
+    # compute coefficients
+    coeffs=pywt.wavedec2(imArray, 'haar', level=1)
+
+    #Process Coefficients
+    coeffs_H=list(coeffs)
+    coeffs_H[0] *= 0;
+
+    # reconstruction
+    imArray_H=pywt.waverec2(coeffs_H,'haar');
+    imArray_H *= 255;
+    imArray_H =  np.uint8(imArray_H)
+
+    return imArray_H[:image.shape[0],:image.shape[1]]
+
+#https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
+#INPUT:
+#im => image to process
+#x => list of x indices to process in im
+#y => list of y indices to process in im
+#
+#NOTES:
+#   make sure to have the same size between x and y as they are the x,y coordinates to process on the image
+def bilinear_interpolate(im, x, y):
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    x0 = np.floor(x).astype(int)
+    x1 = x0 + 3
+    y0 = np.floor(y).astype(int)
+    y1 = y0 + 3
+
+    x0 = np.clip(x0, 0, im.shape[1] - 1);
+    x1 = np.clip(x1, 0, im.shape[1] -1 );
+    y0 = np.clip(y0, 0, im.shape[0]-1);
+    y1 = np.clip(y1, 0, im.shape[0]-1);
+
+    Ia = im[ y0, x0 ]
+    Ib = im[ y1, x0 ]
+    Ic = im[ y0, x1 ]
+    Id = im[ y1, x1 ]
+
+    wa = (x1-x) * (y1-y)
+    wb = (x1-x) * (y-y0)
+    wc = (x-x0) * (y1-y)
+    wd = (x-x0) * (y-y0)
+
+    return (wa*Ia + wb*Ib + wc*Ic + wd*Id).reshape((im.shape[0],im.shape[1]))
 

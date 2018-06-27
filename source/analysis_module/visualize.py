@@ -25,7 +25,8 @@ qsflag = 'quickshift' in sys.argv
 dbscanflag = 'dbscan' in sys.argv
 pcaflag = 'pca' in sys.argv
 ldaflag = 'lda' in sys.argv
-
+wtflag = 'wt' in sys.argv
+bifflag = 'bif' in sys.argv
 #Check system argument length and mode
 #if mode is bin do 3d color binning
 start_time = time.time()
@@ -81,13 +82,19 @@ def display(original,labels=None,SHOWFLAG=True):
 
     #if mode is hog, show hog feature vector of image
     elif hogflag:
-        hist = analyze.extractHOG(original,False)
-        featurevector = hist.flatten()
-        norm = analyze.normalize(featurevector)
-        print('-------------HOG----------------')
-        if SHOWFLAG:
-            analyze.displayHistogram(featurevector)
-        return norm
+        #hist = analyze.extractHOG(original,False)
+        #featurevector = hist.flatten()
+        #norm = analyze.normalize(featurevector)
+        analyze.visualizeHOG(original)
+        #print('-------------HOG----------------')
+        #if SHOWFLAG:
+        #    analyze.displayHistogram(featurevector)
+        return 1
+
+    #if mode is wavelettransform
+    elif wtflag:
+        analyze.visualizeWT(original,show=True)
+        return 1
 
     #if mode is gabor, extract gabor feature from image using several orientations
     elif gaborflag:
@@ -111,6 +118,29 @@ def display(original,labels=None,SHOWFLAG=True):
         if SHOWFLAG:
             analyze.displayHistogram(hist)
         return hist
+
+    elif bifflag:
+        r = original[:,:,2]
+        g = original[:,:,1]
+        b = original[:,:,0]
+        y,x = np.where(r >= 0)
+        out1 = analyze.bilinear_interpolate(r,x,y)
+        y,x = np.where(g >= 0)
+        out2 = analyze.bilinear_interpolate(g,x,y)
+        y,x = np.where(b >= 0)
+        out3 = analyze.bilinear_interpolate(b,x,y)
+
+        print(r)
+        print(out1)
+
+        cv2.namedWindow('bilinear filtering red channel', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('bilinear filtering green channel', cv2.WINDOW_NORMAL)
+        cv2.namedWindow('bilinear filtering blue channel', cv2.WINDOW_NORMAL)
+        cv2.imshow('bilinear filtering red channel', out1.astype(np.uint8))
+        cv2.imshow('bilinear filtering green channel', out2.astype(np.uint8))
+        cv2.imshow('bilinear filtering blue channel', out3.astype(np.uint8))
+        cv2.waitKey(0)
+        return 1
 
     elif binflag:
         hist = analyze.extractbinHist(original,False)

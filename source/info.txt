@@ -25,8 +25,8 @@ cnn5
  meanshift PARAMETERS:
  ++++++++++++++++++++++++++++++++++++
  min-density -> 10000
- spatial-radius -> 1
- range-radius -> 1
+ spatial-radius -> 5
+ range-radius -> 5
 
  hsv meanshift PARAMETERS:
   ++++++++++++++++++++++++++++++++++++
@@ -48,6 +48,21 @@ red -> treematter
 green -> plywood
 blue -> cardboard
 yellow -> bottles
-pink -> trashbag
-turquoise -> blackbag
+magenta -> trashbag
+cyan -> blackbag
+        treematter_mask = [0,0,255]
+        plywood_mask = [0,255,0]
+        cardboard_mask = [255,0,0]
+        bottles_mask = [0,255,255]
+        trashbag_mask = [255,0,255]
+        blackbag_mask = [255,255,0]
+        
+        
+
+feature order:
+++++++++++++++++++++++++++++++++++++
+
+    [color, gabor, hog, hsv, size]
+
+
 

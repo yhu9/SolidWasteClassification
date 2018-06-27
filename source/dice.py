@@ -174,6 +174,9 @@ if __name__ == '__main__':
             img = cv2.imread(dir1,cv2.IMREAD_COLOR)
             gt = cv2.imread(dir2,cv2.IMREAD_COLOR)
             h,w,d = img.shape
+            h2,w2,d2 = gt.shape
+            if h != h2 or w != w2:
+                gt = cv2.resize(gt,(h,w),interpolation = cv2.INTER_CUBIC)
 
             #output to results directory
             if not os.path.exists('results'):

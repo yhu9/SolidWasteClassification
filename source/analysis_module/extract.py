@@ -40,11 +40,7 @@ ldaflag = 'lda' in sys.argv
 start_time = time.time()
 
 #applies the correct mode of operation given user input
-def evaluate(full_path,mode,SHOWFLAG=False):
-    #check if the image was read in correctly
-    original = cv2.imread(full_path,cv2.IMREAD_COLOR)
-    if original is None:
-        print('invalid image! Could not open: %s' % full_path)
+def evaluate(original,mode,SHOWFLAG=False):
 
     #if mode is size
     #print('--------------SIZE---------------')
@@ -96,16 +92,20 @@ def evaluate(full_path,mode,SHOWFLAG=False):
 def evaluate_all(full_path,instances):
     #extract features for each image depending on the flag constants
     features = []
+    original = cv2.imread(full_path,cv2.IMREAD_COLOR)
+    if original is None:
+        print('invalid image! Could not open: %s' % full_path)
+
     if colorflag:
-        features.append(evaluate(full_path,'color',SHOWFLAG=showflag))
+        features.append(evaluate(original,'color',SHOWFLAG=showflag))
     if gaborflag:
-        features.append(evaluate(full_path,'gabor',SHOWFLAG=showflag))
+        features.append(evaluate(original,'gabor',SHOWFLAG=showflag))
     if hogflag:
-        features.append(evaluate(full_path,'hog',SHOWFLAG=showflag))
+        features.append(evaluate(original,'hog',SHOWFLAG=showflag))
     if hsvflag:
-        features.append(evaluate(full_path,'hsv',SHOWFLAG=showflag))
+        features.append(evaluate(original,'hsv',SHOWFLAG=showflag))
     if sizeflag:
-        features.append(evaluate(full_path,'size',SHOWFLAG=showflag))
+        features.append(evaluate(original,'size',SHOWFLAG=showflag))
 
     #create the full feature vector for the given instance image and push to instances
     #and also push the file name as the label for the instance
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
         #run all jobs
         tmpcount = 0
-        max_processes = 100
+        max_processes = 50
         for filepath in mylist:
             tmpcount += 1
             p = Process(target=evaluate_all,args=(filepath,values))

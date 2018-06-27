@@ -22,23 +22,19 @@ CAT3_ONEHOT     = [0,0,1,0,0,0]
 CAT4_ONEHOT     = [0,0,0,1,0,0]
 CAT5_ONEHOT     = [0,0,0,0,1,0]
 CAT6_ONEHOT     = [0,0,0,0,0,1]
-LEARNING_RATE = 0.01               #Learning rate for training the CNN
-CNN_LOCAL1 = 64                  #Number of features output for conv layer 1
-CNN_GLOBAL1 = 64                  #Number of features output for conv layer 2
-CNN_CLASSES      = 6
+LEARNING_RATE = 0.001               #Learning rate for training the CNN
+CNN_LOCAL1 = 32                  #Number of features output for conv layer 1
+CNN_GLOBAL = 32                  #Number of features output for conv layer 1
+CLASSES      = 6
 CNN_EPOCHS       = 1000
-CNN_FULL1   = 500                #Number of features output for fully connected layer1
-IMG_SIZE = 56
-FULL_IMGSIZE = 1000
+CNN_FULL   = 200                #Number of features output for fully connected layer1
+FULL_IMGSIZE = 500
+IMG_SIZE = 28
 IMG_DEPTH   = 3
-KEEP_RATE = 0.85
-BATCH_SIZE = 500
-THRESHOLD = 0.50
+BATCH_SIZE = 300
 
-MIN_DENSITY = 1000
+MIN_DENSITY = 10000
 SPATIAL_RADIUS = 5
 RANGE_RADIUS = 5
 
-WIDTH = 200
-HEIGHT = 200
 

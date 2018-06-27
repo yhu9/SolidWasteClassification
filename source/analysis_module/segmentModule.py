@@ -8,7 +8,6 @@ import numpy as np
 import cv2
 import random
 import math
-import Tkinter as tk
 import pymeanshift as pms
 from matplotlib import pyplot as plt
 ############################################################################################################
@@ -220,59 +219,11 @@ def getSegments(original, SHOW):
     if SHOW == "save":
         cv2.imwrite("saved_segmentation.png",blank)
 
-    allimages["shift segmentation"] = blank
     ################################################################################
     ################################################################################
     ################################################################################
     ################################################################################
     ################################################################################
-    if SHOW == True or SHOW == "show":
-        root = tk.Tk()
-        width = root.winfo_screenwidth()
-        height = root.winfo_screenheight()
-        def quit():
-            root.destroy()
-        quit()
-        if len(allimages) < 5:
-            width = int(width / 2)
-            height = int(height / 2)
-            x,y = 0,0
-            imgCount = 1
-            for key,val in allimages.items():
-                if imgCount > 2:
-                    row = 1
-                else:
-                    row = 0
-                if imgCount % 2 == 1:
-                    col = 0
-                else:
-                    col = 1
-                cv2.namedWindow(key,cv2.WINDOW_NORMAL)
-                cv2.imshow(key,val)
-                cv2.resizeWindow(key,width,height)
-                cv2.moveWindow(key, width * col, height * row)
-                imgCount += 1
-
-        ########################################################
-        #The else isn't ever used but I left it since more images may want to be added during a SHOW
-        else:
-            width = int(width / 3)
-            height = int(height / 3)
-            x,y = 0,0
-            imgCount =0
-            for key,val in allimages.items():
-                row = int(imgCount % 3)
-                col = int(math.floor(imgCount / 3))
-                cv2.namedWindow(key,cv2.WINDOW_NORMAL)
-                cv2.resizeWindow(key,width,height)
-                cv2.moveWindow(key, width * col, height * row)
-                cv2.imshow(key,val)
-                imgCount += 1
-        cv2.waitKey(0)
-        #There is a bug that makes it so that you have to close windows like this on ubuntu 12.10 sometimes.
-        #http://code.opencv.org/issues/2911
-        cv2.destroyAllWindows()
-        cv2.waitKey(-1)
 
     return original, labels_image
 

@@ -122,7 +122,8 @@ def main(unused_argv):
             #read the image from the image file
             if flags['test']:
                 if os.path.isfile(sys.argv[2]):
-                    image = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                    tmp= cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                    image = cv2.resize(tmp,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
                     ms_out = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
                     blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,hsv=hsvflag,filename=ms_out)
                 else:

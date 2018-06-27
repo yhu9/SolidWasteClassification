@@ -8,7 +8,6 @@ import numpy as np
 import cv2
 import random
 import math
-import Tkinter as tk
 import pymeanshift as pms
 import os
 from matplotlib import pyplot as plt
@@ -58,13 +57,7 @@ def saveSegments(original,labels,out_dir,category,SHOW=False,showbg=False):
     blank = original - original
 
     #get the sizes of the discovered segments
-    size_array = []
-    size_dict = {}
     for x in unique_labels:
-        count = np.count_nonzero(labels == x)
-        size_array.append(count)
-        size_dict[x] = count
-
         #color the blank canvas with the different segments
         b = random.randint(0,255)
         g = random.randint(0,255)
@@ -72,20 +65,11 @@ def saveSegments(original,labels,out_dir,category,SHOW=False,showbg=False):
         blank[labels == x] = [b,g,r]
 
     #save the blank canvas
-    fout_original = "segmented_" + category
+    if not os.path.isdir('ms_segmentation'):
+        os.makedirs('ms_segmentation')
+
+    fout_original = os.path.join('ms_segmentation',"segmented_" + category)
     cv2.imwrite(fout_original,blank)
-
-    #get information about the segments
-    mean = np.mean(size_array)
-    total = np.sum(size_array)
-    t_count = len(unique_labels)
-
-    #remove markers given condition and get unique markers again
-    for k in size_dict.keys():
-        if(size_dict[k] < mean / 2):
-            labels[labels == k] = 0
-    unique_labels = np.unique(labels)
-    reduced_count = len(unique_labels)
 
     #for each unique marker crop the image with or without background and save it to the output directory
     count = 0
@@ -117,11 +101,9 @@ def saveSegments(original,labels,out_dir,category,SHOW=False,showbg=False):
             cv2.imshow(resized)
             cv2.waitKey(0)
 
-    print("original count: %s     reduced count: %s     category: %s" % (str(t_count),str(len(unique_labels)),str(category)))
+    print('segmentation saved')
 
 ###############################################################################################################################
-
-
 ########################################################################
 
 ########################################################################
@@ -169,53 +151,6 @@ def getSegments(original, SHOW=False,sr=SPATIAL_RADIUS,rr=RANGE_RADIUS,md=MIN_DE
     ################################################################################
     ################################################################################
     ################################################################################
-    if SHOW == True or SHOW == "show":
-        root = tk.Tk()
-        width = root.winfo_screenwidth()
-        height = root.winfo_screenheight()
-        def quit():
-            root.destroy()
-        quit()
-        if len(allimages) < 5:
-            width = int(width / 2)
-            height = int(height / 2)
-            x,y = 0,0
-            imgCount = 1
-            for key,val in allimages.items():
-                if imgCount > 2:
-                    row = 1
-                else:
-                    row = 0
-                if imgCount % 2 == 1:
-                    col = 0
-                else:
-                    col = 1
-                cv2.namedWindow(key,cv2.WINDOW_NORMAL)
-                cv2.imshow(key,val)
-                cv2.resizeWindow(key,width,height)
-                cv2.moveWindow(key, width * col, height * row)
-                imgCount += 1
-
-        ########################################################
-        #The else isn't ever used but I left it since more images may want to be added during a SHOW
-        else:
-            width = int(width / 3)
-            height = int(height / 3)
-            x,y = 0,0
-            imgCount =0
-            for key,val in allimages.items():
-                row = int(imgCount % 3)
-                col = int(math.floor(imgCount / 3))
-                cv2.namedWindow(key,cv2.WINDOW_NORMAL)
-                cv2.resizeWindow(key,width,height)
-                cv2.moveWindow(key, width * col, height * row)
-                cv2.imshow(key,val)
-                imgCount += 1
-        cv2.waitKey(0)
-        #There is a bug that makes it so that you have to close windows like this on ubuntu 12.10 sometimes.
-        #http://code.opencv.org/issues/2911
-        cv2.destroyAllWindows()
-        cv2.waitKey(-1)
 
     return segmented_image, labels_image
 

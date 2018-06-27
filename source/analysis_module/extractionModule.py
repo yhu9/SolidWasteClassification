@@ -12,9 +12,12 @@ import matplotlib
 import matplotlib.patches as mpatches
 import gabor_threads_roi as gabor
 import gc
+import pywt
 from matplotlib import pyplot as plt
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
+from skimage.feature import hog
+from skimage import exposure
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.cluster import MeanShift
@@ -390,13 +393,97 @@ def extractHSVHist(imageIn,SHOW):
     #lop off black and white
     return normalize(np.concatenate(np.array(hist)))
 
+#visualte wavelet transform
+#https://stackoverflow.com/questions/24536552/how-to-combine-pywavelet-and-opencv-for-image-processing
+def visualizeWT(imageIn, show=False):
+
+    #split the image into its rgb channels
+    r = imageIn[:,:,2]
+    g = imageIn[:,:,1]
+    b = imageIn[:,:,0]
+    imgs = []
+
+    for imArray in [r,g,b]:
+        #convert to float
+        imArray =  np.float32(imArray)
+        imArray /= 255;
+        # compute coefficients
+        coeffs=pywt.wavedec2(imArray, 'haar', level=1)
+        #Process Coefficients
+        coeffs_H=list(coeffs)
+        coeffs_H[0] *= 0;
+        # reconstruction
+        imArray_H=pywt.waverec2(coeffs_H,'haar');
+        imArray_H *= 255;
+        imArray_H =  np.uint8(imArray_H)
+        cv2.namedWindow('image',cv2.WINDOW_NORMAL)
+        cv2.imshow('image',imArray_H)
+        cv2.waitKey(0)
+
+    cv2.destroyAllWindows()
+
+#visualize hog
+#http://scikit-image.org/docs/dev/auto_examples/features_detection/plot_hog.html
+def visualizeHOG(imageIn):
+    fd, hog_image = hog(imageIn, orientations=8, pixels_per_cell=(14, 14),
+                    cells_per_block=(1, 1), visualize=True, multichannel=True)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
+
+    ax1.axis('off')
+    ax1.imshow(imageIn, cmap=plt.cm.gray)
+    ax1.set_title('Input image')
+
+    # Rescale histogram for better display
+    hog_image_rescaled = exposure.rescale_intensity(hog_image, in_range=(0, 10))
+
+    ax2.axis('off')
+    ax2.imshow(hog_image_rescaled, cmap=plt.cm.gray)
+    ax2.set_title('Histogram of Oriented Gradients')
+    plt.show()
+
+#https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
+#INPUT:
+#im => image to process
+#x => list of x indices to process in im
+#y => list of y indices to process in im
+#
+#NOTES:
+#   make sure to have the same size between x and y as they are the x,y coordinates to process on the image
+def bilinear_interpolate(im, x, y):
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    x0 = np.floor(x).astype(int)
+    x1 = x0 + 2
+    y0 = np.floor(y).astype(int)
+    y1 = y0 + 2
+
+    x0 = np.clip(x0, 0, im.shape[1]-1);
+    x1 = np.clip(x1, 0, im.shape[1]-1 );
+    y0 = np.clip(y0, 0, im.shape[0]-1);
+    y1 = np.clip(y1, 0, im.shape[0]-1);
+
+    Ia = im[ y0, x0 ]
+    Ib = im[ y1, x0 ]
+    Ic = im[ y0, x1 ]
+    Id = im[ y1, x1 ]
+
+    wa = (x1-x) * (y1-y)
+    wb = (x1-x) * (y-y0)
+    wc = (x-x0) * (y1-y)
+    wd = (x-x0) * (y-y0)
+
+    return (wa*Ia + wb*Ib + wc*Ic + wd*Id).reshape((im.shape[0],im.shape[1]))
+
+
 #extract the edge distribution from the image segment
 def extractHOG(imageIn, SHOW):
     #necessary for seeing the plots in sequence with one click of a key
 
     h,w,d = imageIn.shape
-    new_w = ((int(w) / int(16)) + 1 ) * 16
-    new_h = ((int(h) / int(16)) + 1 ) * 16
+    new_w = (int(int(w) / int(16)) + 1 ) * 16
+    new_h = (int(int(h) / int(16)) + 1 ) * 16
 
     #resize the image to 64 x 128
     resized = cv2.resize(imageIn,(new_w, new_h), interpolation = cv2.INTER_CUBIC)
@@ -416,10 +503,10 @@ def extractHOG(imageIn, SHOW):
     L2HysThreshold = 2.0000000000000001e-01         #L2 normalization exponent ex: sqrt(x^L2 + y^L2 + z^L2)
     gammaCorrection = 0                             #
     nlevels = 64                                    #
-    hog = cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,
+    cvhog = cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,
                                     histogramNormType,L2HysThreshold,gammaCorrection,nlevels)
 
-    hist = hog.compute(resized)
+    hist = cvhog.compute(resized)
 
     #create the feature vector
     feature = []

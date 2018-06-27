@@ -19,8 +19,8 @@ python save_segments.py save $BOTTLES_DIR $OUT_DIR1 &
 python save_segments.py save $BLACKBAG_DIR $OUT_DIR1 &
 python save_segments.py save $TRASHBAG_DIR $OUT_DIR1 &
 #python save_segments.py save $MIXED_DIR $OUT_DIR1 &
-#python save_segments.py rotate $OUT_DIR1
-
 wait
+
+python save_segments.py rotate $OUT_DIR1
 
 echo "Done extracting blobs"
