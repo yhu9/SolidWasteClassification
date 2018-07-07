@@ -57,7 +57,7 @@ def majorityseg(original,mask):
     return blank1,blank2
 
 #segmentation with thresholding on raw cnn output
-def threshseg(original,raw_values,thresh_val=2.0):
+def threshseg(original,raw_values,thresh_val='mean'):
 
     #segment the image
     if hsvsegflag:
@@ -68,16 +68,34 @@ def threshseg(original,raw_values,thresh_val=2.0):
 
     #get the threshold matrix.
     #1. take sum of all positive predictions divided by the max value. The closer to 1 the better
-    pos_values = raw_values
-    pos_values[raw_values < 0] = 0
-    thresh_matrix = np.nan_to_num(np.sum(raw_values,axis=2) / np.max(raw_values,axis=2)) - 1
+    h,w,d = raw_values.shape
+    raw_values += abs(raw_values.min())
+    raw_values /= float(raw_values.max())
 
     #get the mask
     mask = raw_values.argmax(axis=2)
 
+    #get the thresholded matrix
+    raw_values.sort(axis=2)
+    thresh_matrix = raw_values[:,:,-1] - raw_values[:,:,-2]
+
+    #get threshold value
+    medval = np.median(thresh_matrix[30:-30,30:-30])
+    minval = thresh_matrix.min()
+    maxval = thresh_matrix.max()
+    meanval = np.mean(thresh_matrix)
+    print('mean: %.4f' % meanval)
+    print('min: %.4f' % minval)
+    print('med: %.4f' % medval)
+    print('max: %.4f' % maxval)
+    if(thresh_val == 'median'):
+        thresh_val = medval
+    elif(thresh_val == 'mean'):
+        thresh_val = meanval
+    print('threshval: %.4f' % thresh_val)
+
     #obscure the low threshold pixels
-    mask[thresh_matrix > thresh_val] = -1
-    mask[thresh_matrix < 0] = -1
+    mask[thresh_matrix < thresh_val] = -1
 
     #paint a rgb mask
     rgb_mask = original
@@ -119,7 +137,6 @@ def threshseg(original,raw_values,thresh_val=2.0):
 
     return blank1,blank2,rgb_mask
 
-
 ######################################################################################################3
 ######################################################################################################3
 ######################################################################################################3
@@ -160,7 +177,7 @@ if __name__ == '__main__':
     elif len(sys.argv) >= 3 and os.path.exists(sys.argv[1]) and os.path.exists(sys.argv[2]) and os.path.splitext(os.path.basename(sys.argv[2]))[1] == '.npy':
         #read in the image and the raw values
         original = cv2.imread(sys.argv[1],cv2.IMREAD_COLOR)
-        raws = np.load(sys.argv[2])
+        raws = np.load(sys.argv[2]).astype(np.float32)
 
         #make sure the images are the same size
         h1,w1 = original.shape[:2]
@@ -174,7 +191,8 @@ if __name__ == '__main__':
         if 'thresh' in sys.argv:
             index = sys.argv.index('thresh')
             index += 1
-            thresh_val = float(sys.argv[index])
+            thresh_val = sys.argv[index]
+
             #get the thresholding segmentation
             ms_segmentation, majority_segmentation,thresh_mask = threshseg(img,raws,thresh_val=thresh_val)
         else:
@@ -192,4 +210,5 @@ if __name__ == '__main__':
         cv2.imwrite(fout2,majority_segmentation)
         cv2.imwrite(fout3,thresh_mask)
 
+        quit()
 

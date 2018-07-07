@@ -25,8 +25,10 @@ qsflag = 'quickshift' in sys.argv
 dbscanflag = 'dbscan' in sys.argv
 pcaflag = 'pca' in sys.argv
 ldaflag = 'lda' in sys.argv
+qdaflag = 'qda' in sys.argv
 wtflag = 'wt' in sys.argv
 bifflag = 'bif' in sys.argv
+prawflag = 'plotraws' in sys.argv
 #Check system argument length and mode
 #if mode is bin do 3d color binning
 start_time = time.time()
@@ -40,6 +42,12 @@ def display(original,labels=None,SHOWFLAG=True):
         print(labels)
         if SHOWFLAG:
             seg.showSegments(image,labels)
+
+    #if mode is plt raws
+    elif prawflag:
+        analyze.plotRawPixelOutput(original)
+
+        return 1
 
     #if mode is meanshiftbin, convert 2d image to 3d using bin method and apply meanshift
     elif msbinflag:
@@ -130,9 +138,6 @@ def display(original,labels=None,SHOWFLAG=True):
         y,x = np.where(b >= 0)
         out3 = analyze.bilinear_interpolate(b,x,y)
 
-        print(r)
-        print(out1)
-
         cv2.namedWindow('bilinear filtering red channel', cv2.WINDOW_NORMAL)
         cv2.namedWindow('bilinear filtering green channel', cv2.WINDOW_NORMAL)
         cv2.namedWindow('bilinear filtering blue channel', cv2.WINDOW_NORMAL)
@@ -170,13 +175,16 @@ def scatter(instances,labels):
         else:
             analyze.showLDA(instances,labels,mode='int')
 
+    elif qdaflag:
+        print(qdaflag)
+        analyze.showQDA(instances,labels,mode='int')
 
 if __name__ == '__main__':
 
     if len(sys.argv) >= 2:
 
         #if user input is doing lda or pca
-        if os.path.isfile(sys.argv[1]) and (ldaflag or pcaflag):
+        if os.path.isfile(sys.argv[1]) and (ldaflag or pcaflag or qdaflag):
 
             if os.path.splitext(sys.argv[1])[1] == '.npy':
                 tmp = np.load(sys.argv[1],mmap_mode='r')
@@ -194,7 +202,10 @@ if __name__ == '__main__':
             #evaluate single image
             #check if the image was read in correctly
             if os.path.isfile(sys.argv[1]):
-                original = cv2.imread(sys.argv[1],cv2.IMREAD_COLOR)
+                if os.path.splitext(sys.argv[1])[1] == '.npy' and prawflag:
+                    original = np.load(sys.argv[1])
+                else:
+                    original = cv2.imread(sys.argv[1],cv2.IMREAD_COLOR)
                 display(original)
             else:
                 print('invalid image! Could not open: %s' % sys.argv[1])

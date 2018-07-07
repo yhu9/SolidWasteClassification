@@ -85,44 +85,6 @@ def getBatch(n,instances,labels):
     return np.array(batch),np.array(batch_labels)
 
 
-#extracts blobs from image using the meanshift algorithm
-'''
-INPUTS:
-    1. image
-OUTPUTS:
-    1. 3d numpy array with blobs as instances as 2d numpy arrays
-    2. 1d numpy array as labels
-'''
-def extractBlobs(img,fout="unsupervised_segmentation.png",hsv=False):
-    blobs = []
-    if hsv:
-        hsvimg = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
-        original,markers = getSegments(hsvimg,False)
-    else:
-        original,markers = getSegments(img,False)
-
-    labels = np.unique(markers)
-    canvas = original.copy()
-    for uq_mark in labels:
-        #get the segment and append it to inputs
-        region = original.copy()
-        region[markers != uq_mark] = [0,0,0]
-        grey = cv2.cvtColor(region,cv2.COLOR_BGR2GRAY)
-        x,y,w,h = cv2.boundingRect(grey)
-        cropped = img[y:y+h,x:x+w]
-        cropped = np.uint8(cropped)
-        blobs.append(cropped)
-
-        b = random.randint(0,255)
-        g = random.randint(0,255)
-        r = random.randint(0,255)
-        canvas[markers == uq_mark] = [b,g,r]
-
-    cv2.imwrite(fout,canvas)
-    print("Unsupervised segmentation saved! %s" % fout)
-
-    return blobs, markers, labels
-
 #creates the testing instances from the image by extracting the blobs and evaluating hog/color/gabor features
 '''
 INPUTS:
@@ -133,10 +95,12 @@ OUTPUTS:
     3. 1d numpy array as labels for each instance
 '''
 def createTestingInstancesFromImage(image,hsvseg=False,hog=False,color=False,gabor=False,size=False,hsv=False,filename="unsupervised_segmentation.png"):
+
     #segment the image and extract blobs
     print("finding blobs")
-    blobs,markers,labels = extractBlobs(image,fout=filename,hsv=hsvseg)
+    blobs,markers,labels = analyze.extractBlobs(image,fout=filename,hsv=hsvseg)
     print("BLOBS FOUND!")
+
     #evaluate each blob and extract features from them
     tmp = []
     for i,blob in enumerate(blobs):
@@ -144,6 +108,7 @@ def createTestingInstancesFromImage(image,hsvseg=False,hog=False,color=False,gab
         #console output to show progress
         print("%i of blob %i ---> FEATURES EXTRACTED" % (i + 1, len(blobs)))
         tmp.append(featurevector)
+
     #create numpy array
     instances = np.array(tmp)
 
@@ -251,11 +216,9 @@ def getPCA(featurevector,featurelength=constants.DECOMP_LENGTH):
 
 #applies the pca singular values on a feature vector and returns the results
 def applyPCA(pca,inputfeatures):
-
     if len(inputfeatures.shape) == 1:
         newfeatures = pca.transform(inputfeatures.reshape(1,len(inputfeatures)))
     else:
-        print(inputfeatures.shape)
         newfeatures = pca.transform(inputfeatures)
 
     return newfeatures
@@ -298,7 +261,3 @@ if __name__ == '__main__':
             features,labels = genFromText(featurefile)
             lda = getLDA(features,labels)
             pickle.dump(lda,open(os.path.splitext(os.path.basename(featurefile))[0] + '_lda.pkl','wb'))
-
-
-
-

@@ -11,12 +11,18 @@ import constants
 import matplotlib
 import matplotlib.patches as mpatches
 import gabor_threads_roi as gabor
+import segmentModule as seg
 import gc
+import pywt
+from random import randint
 from matplotlib import pyplot as plt
 from pylab import *
 from mpl_toolkits.mplot3d import Axes3D
+from skimage.feature import hog
+from skimage import exposure
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
 from sklearn.cluster import MeanShift
 from sklearn.cluster import estimate_bandwidth
 from sklearn.cluster import DBSCAN
@@ -359,7 +365,7 @@ def extractColorHist(imageIn,SHOW):
         plt.show()
 
     #lop off black and white
-    return normalize(np.concatenate(np.array(hist)))
+    return np.concatenate(np.array(hist))
 
 #According to http://stackoverflow.com/questions/17063042/why-do-we-convert-from-rgb-to-hsv/17063317
 #HSV is better for object recognition compared to BGR
@@ -388,20 +394,102 @@ def extractHSVHist(imageIn,SHOW):
         plt.show()
 
     #lop off black and white
-    return normalize(np.concatenate(np.array(hist)))
+    return np.concatenate(np.array(hist))
+
+#visualte wavelet transform
+#https://stackoverflow.com/questions/24536552/how-to-combine-pywavelet-and-opencv-for-image-processing
+def visualizeWT(imageIn, show=False):
+
+    #split the image into its rgb channels
+    r = imageIn[:,:,2]
+    g = imageIn[:,:,1]
+    b = imageIn[:,:,0]
+    imgs = []
+
+    for imArray in [r,g,b]:
+        #convert to float
+        imArray =  np.float32(imArray)
+        imArray /= 255;
+        # compute coefficients
+        coeffs=pywt.wavedec2(imArray, 'haar', level=1)
+        #Process Coefficients
+        coeffs_H=list(coeffs)
+        coeffs_H[0] *= 0;
+        # reconstruction
+        imArray_H=pywt.waverec2(coeffs_H,'haar');
+        imArray_H *= 255;
+        imArray_H =  np.uint8(imArray_H)
+        cv2.namedWindow('image',cv2.WINDOW_NORMAL)
+        cv2.imshow('image',imArray_H)
+        cv2.waitKey(0)
+
+    cv2.destroyAllWindows()
+
+#visualize hog
+#http://scikit-image.org/docs/dev/auto_examples/features_detection/plot_hog.html
+def visualizeHOG(imageIn):
+    fd, hog_image = hog(imageIn, orientations=8, pixels_per_cell=(14, 14),
+                    cells_per_block=(1, 1), visualize=True, multichannel=True)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), sharex=True, sharey=True)
+
+    ax1.axis('off')
+    ax1.imshow(imageIn, cmap=plt.cm.gray)
+    ax1.set_title('Input image')
+
+    # Rescale histogram for better display
+    hog_image_rescaled = exposure.rescale_intensity(hog_image, in_range=(0, 10))
+
+    ax2.axis('off')
+    ax2.imshow(hog_image_rescaled, cmap=plt.cm.gray)
+    ax2.set_title('Histogram of Oriented Gradients')
+    plt.show()
+
+#https://stackoverflow.com/questions/12729228/simple-efficient-bilinear-interpolation-of-images-in-numpy-and-python
+#INPUT:
+#im => image to process
+#x => list of x indices to process in im
+#y => list of y indices to process in im
+#
+#NOTES:
+#   make sure to have the same size between x and y as they are the x,y coordinates to process on the image
+def bilinear_interpolate(im, x, y):
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    x0 = np.floor(x).astype(int)
+    x1 = x0 + 2
+    y0 = np.floor(y).astype(int)
+    y1 = y0 + 2
+
+    x0 = np.clip(x0, 0, im.shape[1]-1);
+    x1 = np.clip(x1, 0, im.shape[1]-1);
+    y0 = np.clip(y0, 0, im.shape[0]-1);
+    y1 = np.clip(y1, 0, im.shape[0]-1);
+
+    Ia = im[ y0, x0 ]
+    Ib = im[ y1, x0 ]
+    Ic = im[ y0, x1 ]
+    Id = im[ y1, x1 ]
+
+    wa = (x1-x) * (y1-y)
+    wb = (x1-x) * (y-y0)
+    wc = (x-x0) * (y1-y)
+    wd = (x-x0) * (y-y0)
+
+    return (wa*Ia + wb*Ib + wc*Ic + wd*Id).reshape((im.shape[0],im.shape[1]))
+
 
 #extract the edge distribution from the image segment
 def extractHOG(imageIn, SHOW):
     #necessary for seeing the plots in sequence with one click of a key
 
     h,w,d = imageIn.shape
-    new_w = int(int((int(w) / int(16)) + 1) * 16)
-    new_h = int(int((int(h) / int(16)) + 1) * 16)
+    new_w = (int(int(w) / int(16)) + 1 ) * 16
+    new_h = (int(int(h) / int(16)) + 1 ) * 16
 
     #resize the image to 64 x 128
     resized = cv2.resize(imageIn,(new_w, new_h), interpolation = cv2.INTER_CUBIC)
-    print(w,h)
-    print(new_w,new_h)
 
     #HOG DESCRIPTOR INITILIZATION
     #https://stackoverflow.com/questions/28390614/opencv-hogdescripter-python
@@ -418,10 +506,10 @@ def extractHOG(imageIn, SHOW):
     L2HysThreshold = 2.0000000000000001e-01         #L2 normalization exponent ex: sqrt(x^L2 + y^L2 + z^L2)
     gammaCorrection = 0                             #
     nlevels = 64                                    #
-    hog = cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,
+    cvhog = cv2.HOGDescriptor(winSize,blockSize,blockStride,cellSize,nbins,derivAperture,winSigma,
                                     histogramNormType,L2HysThreshold,gammaCorrection,nlevels)
 
-    hist = hog.compute(resized)
+    hist = cvhog.compute(resized)
 
     #create the feature vector
     feature = []
@@ -439,8 +527,7 @@ def extractHOG(imageIn, SHOW):
         plt.draw()
         plt.show()
 
-    norm = normalize(feature_hist.ravel())
-    return norm
+    return feature_hist.ravel()
 
 
 #get the blob size from the blob
@@ -556,17 +643,26 @@ def displayHistogram(hist,normalize=False):
 #normalize values to max of the set
 def normalize(instances):
     norm_instances = instances.astype(np.float) / np.amax(instances)
-    return np.nan_to_num(norm_instances)
+    return norm_instances
 
 #get the PCA analysis and fit it to the featurevector of instances
 def getLDA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
 
     #all default values except for n_components
-    lda = LDA()
-
+    lda = LDA(solver='svd')
     lda.fit(featurevector[labels >= 0],labels[labels >= 0])
 
     return lda
+
+#get the PCA analysis and fit it to the featurevector of instances
+def getQDA(featurevector,labels,featurelength=constants.DECOMP_LENGTH):
+
+    #all default values except for n_components
+    qda = QDA()
+
+    qda.fit(featurevector[labels >= 0],labels[labels >= 0])
+
+    return qda
 
 #get the PCA analysis and fit it to the featurevector of instances
 def getPCA(featurevector,featurelength=constants.DECOMP_LENGTH):
@@ -603,7 +699,12 @@ def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH,pcaobject
     clabel[tmp == 5] = 5
     clabel[tmp == -1] = 6
 
-    colors = ['red','green','blue','yellow','magenta','cyan','black']
+    #create our color legend
+    allclasses = [0,1,2,3,4,5]
+    colors = ['red','green','blue','yellow','magenta','cyan']
+    if len(clabel[clabel == 6]) > 0:
+        allclasses.append(6)
+        colors.append('black')
 
     fig = plt.figure()
     plt.scatter(x,y,c=clabel,cmap=matplotlib.colors.ListedColormap(colors))
@@ -620,10 +721,9 @@ def showPCA(featurevector,labels,featurelength=constants.DECOMP_LENGTH,pcaobject
     plt.show()
 
 # show the 1st and 2nd component on a graph with labels
-def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
-    #create our color legend
-    colors = ['red','green','blue','yellow','magenta','cyan','black']
-    allclasses = [0,1,2,3,4,5,6]
+def showQDA(featurevector,labels,classes='all',mode='int',qdaobject=None):
+
+    #reshape labels
     tmp = labels.reshape((labels.shape[0]))
 
     #-1 is mixed blobs
@@ -632,14 +732,6 @@ def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
     if mode == 'binary':
         labelID[tmp == 0] = 0
         labelID[tmp == 1] = 1
-    elif mode == 'string':
-        labelID[tmp == 'treematter'] = 0
-        labelID[tmp == 'plywood'] = 1
-        labelID[tmp == 'cardboard'] = 2
-        labelID[tmp == 'bottles'] = 3
-        labelID[tmp == 'trashbag'] = 4
-        labelID[tmp == 'blackbag'] = 5
-        labelID[tmp == 'mixed'] = 6
     elif mode == 'int':
         labelID[tmp == 0] = 0
         labelID[tmp == 1] = 1
@@ -649,23 +741,29 @@ def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
         labelID[tmp == 5] = 5
         labelID[tmp == -1] = 6
 
-    if ldaobject == None:
-        lda = getLDA(featurevector[labelID < 6],labelID[labelID < 6])
-        newfeatures = lda.transform(featurevector)
+    #get the QDA
+    if qdaobject == None:
+        qda = getQDA(featurevector[labelID < 6],labelID[labelID < 6])
+        newfeatures = qda.transform(featurevector)
     else:
-        lda = ldaobject
-        newfeatures = lda.transform(featurevector)
-
-    print('lda acquired')
+        qda = qdaobject
+        newfeatures = qda.transform(featurevector)
+    print('qda acquired')
     print('new features extracted')
 
-    x = newfeatures[:,0]
-    y = newfeatures[:,1]
+    #create our color legend
+    allclasses = [0,1,2,3,4,5]
+    colors = ['red','green','blue','yellow','magenta','cyan']
+    if len(labelID[labelID == 6]) > 0:
+        allclasses.append(6)
+        colors.append('black')
 
     #create our figure
     fig = plt.figure()
 
     #scatter the x,y coordinates with our color legend on the labels
+    x = newfeatures[:,0]
+    y = newfeatures[:,1]
     plt.scatter(x,y,c=labelID,cmap=matplotlib.colors.ListedColormap(colors))
 
     #show visual legend map on top right of screen
@@ -682,25 +780,110 @@ def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
     plt.show()
 
 # show the 1st and 2nd component on a graph with labels
+def showLDA(featurevector,labels,classes='all',mode='int',ldaobject=None):
+
+    #reshape labels
+    tmp = labels.reshape((labels.shape[0]))
+
+    #-1 is mixed blobs
+    labelID = np.full(labels.shape[0],-1)
+
+    if mode == 'binary':
+        labelID[tmp == 0] = 0
+        labelID[tmp == 1] = 1
+    elif mode == 'int':
+        labelID[tmp == 0] = 0
+        labelID[tmp == 1] = 1
+        labelID[tmp == 2] = 2
+        labelID[tmp == 3] = 3
+        labelID[tmp == 4] = 4
+        labelID[tmp == 5] = 5
+        labelID[tmp == -1] = 6
+
+    #get the LDA
+    if ldaobject == None:
+        lda = getLDA(featurevector[labelID < 6],labelID[labelID < 6])
+        newfeatures = lda.transform(featurevector)
+    else:
+        lda = ldaobject
+        newfeatures = lda.transform(featurevector)
+    print('lda acquired')
+    print('new features extracted')
+
+    #create our color legend
+    allclasses = [0,1,2,3,4,5]
+    colors = ['red','green','blue','yellow','magenta','cyan']
+    if len(labelID[labelID == 6]) > 0:
+        allclasses.append(6)
+        colors.append('black')
+
+    #create our figure
+    fig = plt.figure()
+
+    #scatter the x,y coordinates with our color legend on the labels
+    x = newfeatures[:,0]
+    y = newfeatures[:,1]
+    plt.scatter(x,y,c=labelID,cmap=matplotlib.colors.ListedColormap(colors))
+
+    #show visual legend map on top right of screen
+    red_patch = mpatches.Patch(color='red',label='treematter')
+    green_patch = mpatches.Patch(color='green',label='plywood')
+    blue_patch = mpatches.Patch(color='blue',label='cardboard')
+    yellow_patch = mpatches.Patch(color='yellow',label='bottles')
+    magenta_patch = mpatches.Patch(color='magenta',label='trashbag')
+    cyan_patch = mpatches.Patch(color='cyan',label='blackbag')
+    black_patch = mpatches.Patch(color='black',label='mixed')
+    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch,black_patch])
+
+    #show plot
+    plt.show()
+
+#plot raw values from a .npy raw values output of a learned model classifiying pixels
+def plotRawPixelOutput(raws):
+    raws = raws[15:-15,15:-15,:].astype(np.float32)
+    h,w,d = raws.shape
+    raws += float(abs(raws.min()))
+    raws /= float(raws.max())
+    raws.sort(axis=2)
+    max1_max2 = (raws[:,:,-1] - raws[:,:,-2]).reshape((h*w))
+    np.random.shuffle(max1_max2)
+    smaller = max1_max2[:10000]
+    smaller.sort()
+    med = np.median(smaller)
+    mean = np.mean(smaller)
+
+    print(smaller)
+    print('max is: %.4f' % smaller[-1])
+    print('median is: %.4f' % med)
+    print('min is: %.4f' % smaller[0])
+    print('mean is: %.4f' % mean)
+
+    fig,ax = plt.subplots()
+    ax.bar(np.arange(len(smaller)),smaller,width=1,align='center')
+    ax.hlines(y=med,xmin=0,xmax=len(smaller),color='r')
+    ax.hlines(y=mean,xmin=0,xmax=len(smaller),color='g')
+    plt.xlim(xmin=0,xmax=len(smaller))
+    plt.show()
+
+    return 1
+
+
+# show the 1st and 2nd component on a graph with labels
 def showLDA2(featurevector,labels,classes='all',featurelength=constants.DECOMP_LENGTH):
     #create our color legend
-    colors = ['red','green','blue','yellow','magenta','cyan']
+    colors = ['red','green','blue','yellow','magenta','cyan','black']
+    cats = ['treematter','plywood','cardboard','bottles','trashbag','blackbag','other']
     allclasses = [0,1,2,3,4,5]
-    tmp = labels.reshape((labels.shape[0]))
-    labelID= np.full(labels.shape[0],-1)
-    labelID[tmp == 'treematter'] = 0
-    labelID[tmp == 'plywood'] = 1
-    labelID[tmp == 'cardboard'] = 2
-    labelID[tmp == 'bottles'] = 3
-    labelID[tmp == 'trashbag'] = 4
-    labelID[tmp == 'blackbag'] = 5
+    labels = labels.reshape((labels.shape[0]))
 
+    #apply labels as is
     if classes == 'all':
-        lda = getLDA(featurevector,labelID)
+        lda = getLDA(featurevector,labels)
         newfeatures = lda.transform(featurevector)
-
         x = newfeatures[:,0]
         y = newfeatures[:,1]
+
+    #apply classes and set everything else as mixed where mixed is -1
     else:
         tree = 'tree' in classes
         plywood = 'ply' in classes
@@ -709,23 +892,25 @@ def showLDA2(featurevector,labels,classes='all',featurelength=constants.DECOMP_L
         trashbag = 'trashbag' in classes
         blackbag = 'black' in classes
         flags = [tree,plywood,cardboard,bottles,trashbag,blackbag]
-        names = ['treematter','plywood','cardboard','bottles','trashbag','blackbag']
-
-        tmp_labels = np.full(labels.shape[0],-1)
-        tmp_colors = []
+        colorscheme = []
         i = 0
-        for flag,cat,col in zip(flags,names,colors):
-            if flag:
-                tmp_labels[tmp == cat] = i
-                tmp_colors.append(col)
-                i += 1
 
-        tmp_labels[tmp == -1] = i
-        tmp_colors.append(col)
-        tmp_labels = tmp_labels.astype(int)
+        #set other groups to their respective colors
+        for flag,cat,col in zip(flags,range(6),colors):
+            if flag:
+                labels[labels == cat] = i
+                colorscheme.append(col)
+                i += 1
+            else:
+                labels[labels == cat] = -1
+        if len(np.where(labels == -1)) > 0:
+            flags.append(True)
+            colorscheme.append('black')
+        labels[labels == -1] = i
+        labels = labels.astype(int)
 
         #fit lda on the instances and their labels removing instances without the labels
-        lda = getLDA(featurevector,tmp_labels)
+        lda = getLDA(featurevector,labels)
 
         #transform the dataset
         newfeatures = lda.transform(featurevector)
@@ -736,27 +921,19 @@ def showLDA2(featurevector,labels,classes='all',featurelength=constants.DECOMP_L
             x = newfeatures
             y = np.zeros(x.shape[0])
 
-        labelID = tmp_labels
-        colors = tmp_colors
-
-    #print out number of features reduced
-    #score = lda.score(tmp_instances,labelID)
-    #print("LDA SCORE: %f" % score)
-
     #create our figure
     fig = plt.figure()
 
     #scatter the x,y coordinates with our color legend on the labels
-    plt.scatter(x,y,c=labelID,cmap=matplotlib.colors.ListedColormap(colors))
+    plt.scatter(x,y,c=labels,cmap=matplotlib.colors.ListedColormap(colorscheme))
 
     #show visual legend map on top right of screen
-    red_patch = mpatches.Patch(color='red',label='treematter')
-    green_patch = mpatches.Patch(color='green',label='plywood')
-    blue_patch = mpatches.Patch(color='blue',label='cardboard')
-    yellow_patch = mpatches.Patch(color='yellow',label='bottles')
-    magenta_patch = mpatches.Patch(color='magenta',label='trashbag')
-    cyan_patch = mpatches.Patch(color='cyan',label='blackbag')
-    plt.legend(handles=[red_patch,green_patch,blue_patch,yellow_patch,magenta_patch,cyan_patch])
+    handles = []
+    for i,f in enumerate(flags):
+        if f:
+            patch = mpatches.Patch(color=colors[i],label=cats[i])
+            handles.append(patch)
+    plt.legend(handles=handles)
 
     #show plot
     plt.show()
@@ -788,6 +965,12 @@ def evaluateSegment(segment,hogflag=False,gaborflag=False,colorflag=False,sizefl
     if sizeflag:
         features.append(evaluate(segment,'size'))
 
+    #double check for bad images that are completely black
+    for f in features:
+        if np.isnan(f).any() or np.isinf(f).any():
+            print('%s is NOT A GOOD IMAGE THE FILE WILL NOT BE USED!' % full_path)
+            return 0
+
     #create the full feature vector for the given instance image and push to instances
     #and also push the file name as the label for the instance
     full_vector = np.array([])
@@ -795,6 +978,51 @@ def evaluateSegment(segment,hogflag=False,gaborflag=False,colorflag=False,sizefl
         full_vector = np.hstack((full_vector,features[i]))
 
     return full_vector
+
+#extracts blobs from image using the meanshift algorithm
+'''
+INPUTS:
+    1. image
+OUTPUTS:
+    1. 3d numpy array with blobs as instances as 2d numpy arrays
+    2. 1d numpy array as labels
+'''
+def extractBlobs(img,fout="unsupervised_segmentation.png",hsv=False):
+    blobs = []
+    if hsv:
+        print('HSV SEGMENTATION')
+        hsvimg = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+        seg_img,markers = seg.getSegments(hsvimg,sr=5,rr=5,md=1000)
+    else:
+        print('BGR SEGMENTATION')
+        seg_img,markers = seg.getSegments(img,sr=1,rr=1,md=1000)
+
+    labels = np.unique(markers)
+    canvas = img.copy()
+    for uq_mark in labels[1:]:
+        #get the segment and append it to inputs
+        region = img.copy()
+        region[markers != uq_mark] = [0,0,0]
+
+        #opencv bounding rect only works on single channel images...
+        blank = img.copy()
+        blank = blank - blank
+        blank[markers == uq_mark] = [255,255,255]
+        grey = cv2.cvtColor(blank,cv2.COLOR_BGR2GRAY)
+        x,y,w,h = cv2.boundingRect(grey)
+        cropped = region[y:y+h,x:x+w]
+        cropped = np.uint8(cropped)
+        blobs.append(cropped)
+
+        b = randint(0,255)
+        g = randint(0,255)
+        r = randint(0,255)
+        canvas[markers == uq_mark] = [b,g,r]
+
+    cv2.imwrite(fout,canvas)
+    print("Unsupervised segmentation saved! %s" % fout)
+
+    return blobs, markers, labels
 
 #EVALUATE AN IMAGE GIVEN THE MODE
 def evaluate(original,mode,SHOWFLAG=False):
@@ -814,16 +1042,14 @@ def evaluate(original,mode,SHOWFLAG=False):
     #if mode is hog, show hog feature vector of image
     elif mode == 'hog':
         hist = extractHOG(original,False)
-        featurevector = hist.flatten()
-        norm = normalize(featurevector)
+        norm = normalize(hist)
         return norm
 
     #if mode is color, show color histogram of image
     elif mode == 'color':
         hist = extractColorHist(original,False)
         norm = normalize(hist)
-        #print('-------------Color----------------')
-        #print(norm)
+
         return norm
 
     #if mode is gabor, extract gabor feature from image using several orientations
@@ -836,8 +1062,6 @@ def evaluate(original,mode,SHOWFLAG=False):
         result = gabor.run_gabor(original, filters, combined_filename, orientations, mode='training')
         featurevector = result.flatten()[1:]
         norm = normalize(featurevector)
-        #print('--------------Gabor---------------')
-        #print(norm)
         return norm
 
     elif mode == 'hsv':

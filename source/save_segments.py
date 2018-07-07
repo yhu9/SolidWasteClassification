@@ -3,7 +3,6 @@ import sys
 import os
 import cv2
 
-
 #for each image in directory get the segments and save them
 '''
 inputs:
@@ -19,7 +18,7 @@ def saveMSSegments(directory,dirout='',bg=False):
         full_dir1 = directory + f1
 
         tmp = cv2.imread(full_dir1,cv2.IMREAD_COLOR)
-        original = cv2.resize(tmp,(1000,1000),cv2.INTER_CUBIC)
+        original = cv2.resize(tmp,(1000,1000),interpolation=cv2.INTER_CUBIC)
 
         segmented_image, labels = segmentModule.getSegments(original,False,md=1000,rr=1,sr=1)
         segmentModule.saveSegments(original,labels,dirout,f1,showbg=bg)

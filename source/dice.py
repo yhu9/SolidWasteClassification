@@ -27,14 +27,14 @@ def dice(img,gt,fout='dice_output.txt',writemode='w'):
             P = float(TP + FN)
             N = float(TN + FP)
 
-            binary1 = np.array(np.all(img == mask,axis = 2),dtype=np.uint8)
-            binary2 = np.array(np.all(gt == mask,axis = 2),dtype=np.uint8)
-            b1_and_b2 = np.array(np.logical_and(binary1,binary2),dtype=np.uint8)
-            binary1[binary1 == 1] = 255
-            binary2[binary2 == 1] = 255
-            b1_and_b2[b1_and_b2 == 1] = 255
 
             #for debugging purposes
+            #binary1 = np.array(np.all(img == mask,axis = 2),dtype=np.uint8)
+            #binary2 = np.array(np.all(gt == mask,axis = 2),dtype=np.uint8)
+            #b1_and_b2 = np.array(np.logical_and(binary1,binary2),dtype=np.uint8)
+            #binary1[binary1 == 1] = 255
+            #binary2[binary2 == 1] = 255
+            #b1_and_b2[b1_and_b2 == 1] = 255
             #cv2.imshow('binary1',cv2.resize(binary1,(500,500),interpolation=cv2.INTER_CUBIC))
             #cv2.imshow('binary2',cv2.resize(binary2,(500,500),interpolation=cv2.INTER_CUBIC))
             #cv2.imshow('b1_and_b2',cv2.resize(b1_and_b2,(500,500),interpolation=cv2.INTER_CUBIC))

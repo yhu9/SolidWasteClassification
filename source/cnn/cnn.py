@@ -277,12 +277,12 @@ def main(unused_argv):
 
         #define optimization and accuracy creation
         with tf.name_scope('cost'):
-            cost1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions1,labels=y1)
-            cost2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions2,labels=y2)
-            cost3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions3,labels=y3)
-            cost4 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions4,labels=y4)
-            cost5 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions5,labels=y5)
-            cost6 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions6,labels=y6)
+            cost1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions1,labels=y1))
+            cost2 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions2,labels=y2))
+            cost3 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions3,labels=y3))
+            cost4 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions4,labels=y4))
+            cost5 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions5,labels=y5))
+            cost6 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions6,labels=y6))
             tf.summary.histogram('cost1',cost1)
             tf.summary.histogram('cost2',cost2)
             tf.summary.histogram('cost3',cost3)

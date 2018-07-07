@@ -67,12 +67,12 @@ flags['lda'] = 'lda' in sys.argv
 #Main Function
 def main(unused_argv):
 
-    if not os.path.exists('logs'):
-        os.makedirs('logs')
+    if not os.path.exists('log'):
+        os.makedirs('log')
 
     #check the number of arguments given with running the program
     #must be at least two
-    if len(sys.argv) >= 2:
+    if len(sys.argv) >= 3 and (sys.argv[1] == 'test' or sys.argv[1] == 'train'):
 
         #if we are training the model on extracted instances
         if flags['train']:
@@ -110,36 +110,32 @@ def main(unused_argv):
             #model name
             modelpath = sys.argv[3]
             tokens = modelpath.split('_')
-            hogflag = 'hog' in tokens[1]
-            gaborflag = 'gabor' in tokens[1]
             colorflag = 'color' in tokens[1]
-            sizeflag = 'size' in tokens[1]
+            gaborflag = 'gabor' in tokens[1]
+            hogflag = 'hog' in tokens[1]
             hsvflag = 'hsv' in tokens[1]
+            sizeflag = 'size' in tokens[1]
             hsvsegflag = 'hsvseg' in tokens[2]
+
+            print('color: %s' % colorflag)
+            print('gabor: %s' % gaborflag)
+            print('hog: %s' % hogflag)
+            print('hsv: %s' % hsvflag)
+            print('size: %s' % sizeflag)
+            print('hsvseg: %s' % hsvsegflag)
 
             #extract the testing instances from the image
             #look at the model naming convention to see what features we are extracting
             #read the image from the image file
             if flags['test']:
                 if os.path.isfile(sys.argv[2]):
-                    tmp= cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                    tmp = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
                     image = cv2.resize(tmp,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
                     ms_out = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
                     blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=hsvsegflag,hog=hogflag,gabor=gaborflag,color=colorflag,size=sizeflag,hsv=hsvflag,filename=ms_out)
+
                 else:
                     print("image could not be read!")
-                    sys.exit()
-                print('hog: %s' % hogflag)
-                print('gabor: %s' % gaborflag)
-                print('color: %s' % colorflag)
-                print('size: %s' % sizeflag)
-                print('hsv: %s' % hsvflag)
-                print('hsvseg: %s' % hsvsegflag)
-            elif flags['test2']:
-                if os.path.isfile(sys.argv[2]):
-                    blobinstances,labels = featureReader.genFromText(sys.argv[2])
-                else:
-                    print('npy file could not be read!')
                     sys.exit()
 
             #apply pca on the instances
@@ -149,7 +145,7 @@ def main(unused_argv):
                 pca = featureReader.loadPCA(sys.argv[pcaID])
                 new_instances = pca.transform(blobinstances)
                 featurelength = pca.n_components_
-                print('pca generated')
+                print('pca generated. %i components' % featurelength)
             elif flags['lda']:
                 ldaID = sys.argv.index('lda') + 1
                 lda = featureReader.loadLDA(sys.argv[ldaID])
@@ -165,10 +161,12 @@ def main(unused_argv):
         #Define our Neural Network from scratch
         #################################################################################################################
         #################################################################################################################
-        x = tf.placeholder('float',[None,featurelength])
-        y = tf.placeholder('float',[None,constants.NN_CLASSES])
+
         weights = {}
         biases = {}
+        with tf.name_scope('inputlayer'):
+            x = tf.placeholder('float',[None,featurelength])
+            y = tf.placeholder('float',[None,constants.NN_CLASSES])
 
         #create our first fully connected layer
         with tf.name_scope('Fully_Connected_1'):
@@ -176,9 +174,7 @@ def main(unused_argv):
                 weights['W_fc1'] = tf.Variable(tf.random_normal([featurelength,constants.NN_FULL1]))
                 biases['b_fc1'] = tf.Variable(tf.random_normal([constants.NN_FULL1]))
                 layer_1 = tf.add(tf.matmul(x,weights['W_fc1']),biases['b_fc1'])
-                fc1= tf.nn.relu(layer_1)
-                #fullyConnected = tf.nn.dropout(fullyConnected,constants.KEEP_RATE)
-            tf.summary.histogram('activation1',fc1)
+                fc1 = tf.nn.relu(layer_1)
 
         #create our first fully connected layer
         with tf.name_scope('Fully_Connected_2'):
@@ -186,9 +182,7 @@ def main(unused_argv):
                 weights['W_fc2'] = tf.Variable(tf.random_normal([constants.NN_FULL1,constants.NN_FULL2]))
                 biases['b_fc2'] = tf.Variable(tf.random_normal([constants.NN_FULL2]))
                 layer_2 = tf.add(tf.matmul(fc1,weights['W_fc2']),biases['b_fc2'])
-                fc2= tf.nn.relu(layer_2)
-                #fullyConnected = tf.nn.dropout(fullyConnected,constants.KEEP_RATE)
-            tf.summary.histogram('activation2',fc2)
+                fc2 = tf.nn.relu(layer_2)
 
         #third fully connected layer
         with tf.name_scope('Fully_Connected_3'):
@@ -197,8 +191,6 @@ def main(unused_argv):
                 biases['b_fc3'] = tf.Variable(tf.random_normal([constants.NN_FULL3]))
                 layer_3 = tf.add(tf.matmul(fc2,weights['w_fc3']),biases['b_fc3'])
                 fc3= tf.nn.relu(layer_3)
-                #fullyConnected = tf.nn.dropout(fullyConnected,constants.KEEP_RATE)
-            tf.summary.histogram('activation3',fc3)
 
         #Final fully connected layer for classification
         with tf.name_scope('output'):
@@ -208,7 +200,9 @@ def main(unused_argv):
 
         #define optimization and accuracy creation
         with tf.name_scope('cost'):
-            cost = tf.nn.softmax_cross_entropy_with_logits_v2(logits=predictions,labels=y)
+            cost = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions,labels=y)
+            cost_sum = tf.reduce_mean(cost)
+            tf.summary.scalar('cost',cost_sum)
         with tf.name_scope('optimizer'):
             optimizer = tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost)
         with tf.name_scope('accuracy'):
@@ -230,10 +224,10 @@ def main(unused_argv):
         if flags['train']:
             #Run the session/NN and train/record accuracies at given steps
             #net = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
-            #with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as sess:
-            with tf.Session() as sess:
+            with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,device_count={'GPU':0})) as sess:
                 sess.run(init)
-                merged = tf.summary.merge_all()
+                training_writer = tf.summary.FileWriter('./log/training',sess.graph)
+                testing_writer = tf.summary.FileWriter('./log/testing',sess.graph)
 
                 #apply pca on the instances extracted from the feature file
                 modelpath = os.path.splitext(os.path.basename(featurefile))[0] + "_model"
@@ -242,7 +236,7 @@ def main(unused_argv):
                 elif flags['pca']:
                     modelpath += '_pca'
 
-                logdir = "logs/log_"+modelpath+".txt"
+                logdir = "log/log_"+modelpath+".txt"
 
                 #create and figure out where we save the information to
                 if not os.path.exists(modelpath):
@@ -251,16 +245,21 @@ def main(unused_argv):
 
                 #training of the model
                 acc = 0.00;
+                merged = tf.summary.merge_all()
                 for epoch in range(constants.NN_EPOCHS):
 
-                    #get an image batch for each category and train on it
+                    #get an image batch for each category and train on it. write out the summary.
                     batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE,new_instances,labels)
-                    optimizer.run(feed_dict={x: batch_x, y: batch_y})
+                    summary = sess.run([merged,optimizer],feed_dict={x: batch_x, y: batch_y})
+                    training_writer.add_summary(summary[0],epoch)
+                    training_writer.flush()
 
                     #evaluate the model using a test set
                     if epoch % 1 == 0:
                         eval_x,eval_y = featureReader.getBatch(constants.BATCH_SIZE,new_instances,labels)
-                        accnew = accuracy.eval({x: eval_x, y: eval_y})
+                        summary,accnew = sess.run([merged,accuracy],feed_dict={x:eval_x, y:eval_y})
+                        testing_writer.add_summary(summary,epoch)
+                        testing_writer.flush()
 
                         #save the model if it holds the highest accuracy or is tied for highest accuracy
                         if(accnew >= acc):
@@ -298,7 +297,7 @@ def main(unused_argv):
             '''
 
             #restore the graph and make the predictions and show the segmented image
-            with tf.Session() as sess:
+            with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,device_count={'GPU':0})) as sess:
                 #get the directory of the checkpoint
                 ckpt_dir = sys.argv[3]
                 sess.run(init)
@@ -308,10 +307,8 @@ def main(unused_argv):
                 #run the instances extracted on the learned model and get raw and max prediction
                 rawpredictions = predictions.eval({x:new_instances})
                 predictions = rawpredictions.argmax(axis=1)
-                print("predictions made")
-                print(predictions)
                 rawname = "rawoutput_" + str(os.path.basename(os.path.abspath(os.path.join(sys.argv[3],'../')))[0]) + ".txt"
-                rawfile = os.path.join('logs',rawname)
+                rawfile = os.path.join('log',rawname)
 
                 with open(rawfile,'w') as fout:
                     for raw,cat,mark in zip(rawpredictions,predictions,markerlabels):
@@ -328,15 +325,18 @@ def main(unused_argv):
                     best_guess[markers == l] = p
 
                 #write the results
+                if not os.path.isdir('results'):
+                    os.makedirs('results')
                 imgname = os.path.basename(sys.argv[2])
                 modelname = os.path.dirname(sys.argv[3])
                 fileout = os.path.splitext(imgname)[0] + '_' + modelname + '_learnedseg' + ".png"
+                fileout = os.path.join('results',fileout)
                 featureReader.outputResults(image,np.array(best_guess),fout=fileout)
 
                 print("segmentation results successfully saved to %s" % fileout)
 
         elif flags['test2']:
-            with tf.Session() as sess:
+            with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,device_count={'GPU':0})) as sess:
                 #get the directory of the checkpoint
                 ckpt_dir = sys.argv[3]
                 sess.run(init)
@@ -349,14 +349,24 @@ def main(unused_argv):
                     print("TRIAL %i         ACCURACY: %.4f" % (i,accnew))
 
 
-
-        elif sys.argv[1] == 'debug':
-
-            print("nothing to debug")
-
         else:
             print("test image_filepath features_filepath model_filepath")
             print("train features_filepath")
+
+    elif sys.argv[1] == 'debug':
+        if os.path.isfile(sys.argv[2]):
+            tmp = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+            image = cv2.resize(tmp,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
+            ms_out = "ms_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + ".png"
+
+            blobinstances,markers,markerlabels = featureReader.createTestingInstancesFromImage(image,hsvseg=False,hog=True,gabor=True,color=True,size=True,hsv=True,filename=ms_out)
+            np.save('blobs',blobinstances)
+            quit()
+        else:
+            print("image could not be read!")
+            sys.exit()
+
+        print('debugging')
     else:
         print("oopsies")
         print("argv[1]: mode of operation (test,train,see)")

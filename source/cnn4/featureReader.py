@@ -33,6 +33,55 @@ def cnn_readOneImg2(image_dir):
     return(canvas,markers)
 
 #gets n patches from an image with its respective label
+def getTestingBatch(n,catname='mixed'):
+    cats = ['treematter','plywood','cardboard','bottles','trashbag','blackbag']
+    random.seed(None)
+    inputs = []
+    labels = []
+
+    #initialize variables
+    tmp = cv2.imread(constants.MIXEDFILE,cv2.IMREAD_COLOR)
+    img = cv2.resize(tmp,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
+    hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
+    groundtruth = cv2.imread(constants.GROUND_TRUTH,cv2.IMREAD_COLOR)
+
+    #pick a random file from the list of files for each category and read them in
+    #if mixed get even amounts of everything and use the label for that category
+
+    #initialize the image
+    #concatenate each channel and use it as the input
+    img = np.concatenate((img,hsv),axis=-1)
+
+    #get pixel batch
+    w, h, d = img.shape
+    for j in range(n):
+        low = int(constants.IMG_SIZE / 2)
+        high = int(w - (constants.IMG_SIZE / 2) - 1)
+        a = random.randint(low,high)
+        b = random.randint(low,high)
+        box_low1 = int(a - (constants.IMG_SIZE / 2))
+        box_low2 = int(b - (constants.IMG_SIZE / 2))
+        box_high1 = int(a + (constants.IMG_SIZE / 2))
+        box_high2 = int(b + (constants.IMG_SIZE / 2))
+
+        #get the box
+        box = img[box_low1:box_high1,box_low2:box_high2,:]
+
+        inputs.append(box)
+        labels.append(categories[i])
+
+
+    #shuffle the input and labels in parralel
+    c = list(zip(inputs,labels))
+    random.shuffle(c)
+    inputs,labels = zip(*c)
+    inputs = np.array(inputs)[:n,:,:,:]
+    labels = np.array(labels)[:n]
+
+    #return as batch size to get normal distribution
+    return inputs,labels
+
+#gets n patches from an image with its respective label
 def getBatch(n,catname='mixed'):
     cats = ['treematter','plywood','cardboard','bottles','trashbag','blackbag']
     random.seed(None)
@@ -68,15 +117,10 @@ def getBatch(n,catname='mixed'):
         #initialize the image
         full_img = cv2.imread(f,cv2.IMREAD_COLOR)
         img = cv2.resize(full_img,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
-        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-
-        #extract features
-        hogimg = getHOG(img)
-        wt = extractWT(gray)
+        hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV)
 
         #concatenate each channel and use it as the input
-        img = np.concatenate((img,hogimg.reshape((hogimg.shape[0],hogimg.shape[1],1))),axis=-1)
-        img = np.concatenate((img,wt.reshape((wt.shape[0],wt.shape[1],1))),axis=-1)
+        img = np.concatenate((img,hsv),axis=-1)
 
         if(catname == 'mixed'):
             #get pixel batch

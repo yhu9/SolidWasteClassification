@@ -174,8 +174,9 @@ def main(unused_argv):
             output1 = tf.reshape(tree_activations,[-1,magic_number])
             predictions1 = tf.matmul(output1,weights['out1'])+biases['out1']
             with tf.name_scope('cost'):
-                cost1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions1,labels=y1))
-                cost_sum1 = tf.summary.scalar('cost1',cost1)
+                cost1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions1,labels=y1)
+                reduced1 = tf.reduce_mean(cost1)
+                cost_sum1 = tf.summary.scalar('cost1',reduced1)
             with tf.name_scope('optimizer'):
                 optimizer1= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost1)
             with tf.name_scope('accuracy'):
@@ -203,8 +204,9 @@ def main(unused_argv):
             output1 = tf.reshape(plywood_activations,[-1,magic_number])
             predictions2 = tf.matmul(output1,weights['out1'])+biases['out1']
             with tf.name_scope('cost'):
-                cost2 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions2,labels=y2))
-                cost_sum2 = tf.summary.scalar('cost2',cost2)
+                cost2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions2,labels=y2)
+                reduced2 = tf.reduce_mean(cost2)
+                cost_sum2 = tf.summary.scalar('cost2',reduced2)
             with tf.name_scope('optimizer'):
                 optimizer2= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost2)
             with tf.name_scope('accuracy'):
@@ -232,8 +234,9 @@ def main(unused_argv):
             output1 = tf.reshape(cardboard_activations,[-1,magic_number])
             predictions3 = tf.matmul(output1,weights['out1'])+biases['out1']
             with tf.name_scope('cost'):
-                cost3 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions3,labels=y3))
-                cost_sum3 = tf.summary.scalar('cost3',cost3)
+                cost3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions3,labels=y3)
+                reduced3 = tf.reduce_mean(cost3)
+                cost_sum3 = tf.summary.scalar('cost3',reduced3)
             with tf.name_scope('optimizer'):
                 optimizer3= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost3)
             with tf.name_scope('accuracy'):
@@ -261,8 +264,9 @@ def main(unused_argv):
             output1 = tf.reshape(bottles_activations,[-1,magic_number])
             predictions4 = tf.matmul(output1,weights['out1'])+biases['out1']
             with tf.name_scope('cost'):
-                cost4 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions4,labels=y4))
-                cost_sum4 = tf.summary.scalar('cost4',cost4)
+                cost4 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions4,labels=y4)
+                reduced4 = tf.reduce_mean(cost4)
+                cost_sum4 = tf.summary.scalar('cost4',reduced4)
             with tf.name_scope('optimizer'):
                 optimizer4= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost4)
             with tf.name_scope('accuracy'):
@@ -290,8 +294,9 @@ def main(unused_argv):
             output1 = tf.reshape(pbag_activations,[-1,magic_number])
             predictions5 = tf.matmul(output1,weights['out1'])+biases['out1']
             with tf.name_scope('cost'):
-                cost5 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions5,labels=y5))
-                cost_sum5 = tf.summary.scalar('cost5',cost5)
+                cost5 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions5,labels=y5)
+                reduced5 = tf.reduce_mean(cost5)
+                cost_sum5 = tf.summary.scalar('cost5',reduced5)
             with tf.name_scope('optimizer'):
                 optimizer5= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost5)
             with tf.name_scope('accuracy'):
@@ -319,8 +324,9 @@ def main(unused_argv):
             output1 = tf.reshape(bbag_activations,[-1,magic_number])
             predictions6 = tf.matmul(output1,weights['out1'])+biases['out1']
             with tf.name_scope('cost'):
-                cost6 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions6,labels=y6))
-                cost_sum6 = tf.summary.scalar('cost6',cost6)
+                cost6 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions6,labels=y6)
+                reduced6 = tf.reduce_mean(cost6)
+                cost_sum6 = tf.summary.scalar('cost6',reduced6)
             with tf.name_scope('optimizer'):
                 optimizer6= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost6)
             with tf.name_scope('accuracy'):
@@ -344,9 +350,10 @@ def main(unused_argv):
             weights['w_all'] = tf.Variable(tf.random_normal([constants.CNN_FULL,constants.CLASSES]))
             biases['b_all'] = tf.Variable(tf.random_normal([constants.CLASSES]))
             predictions_final = tf.matmul(fc_activation2,weights['w_all']) + biases['b_all']
-            predictions_out = tf.nn.softmax(predictions_final)
-            all_cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions_final,labels=y))
-            allcost_sum = tf.summary.scalar('all_cost',all_cost)
+            predictions_out = tf.nn.sigmoid(predictions_final)
+            all_cost = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions_final,labels=y)
+            all_reduced = tf.reduce_mean(all_cost)
+            allcost_sum = tf.summary.scalar('all_cost',all_reduced)
 
             var_list1 = [weights['w_all'],biases['b_all'],weights['w_all1'],weights['w_all2'],biases['b_all1'],biases['b_all2']]
             all_optimizer = tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(all_cost,var_list=var_list1)
@@ -369,7 +376,8 @@ def main(unused_argv):
             #net = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
             #with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as sess:
             with tf.Session() as sess:
-                training_writer = tf.summary.FileWriter('./log',sess.graph)
+                training_writer = tf.summary.FileWriter('./log/training',sess.graph)
+                testing_writer = tf.summary.FileWriter('./log/testing',sess.graph)
                 sess.run(init)
 
                 #train the model
@@ -405,8 +413,9 @@ def main(unused_argv):
 
                     #run the final optimizer
                     batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE)
-                    summary = sess.run([all_cost,all_optimizer],feed_dict={x1: batch_x,x2: batch_x,x3: batch_x,x4: batch_x,x5: batch_x,x6: batch_x, y: batch_y})
-
+                    merged2 = tf.summary.merge([allcost_sum])
+                    summary = sess.run([merged2,all_reduced,all_optimizer],feed_dict={x1: batch_x,x2: batch_x,x3: batch_x,x4: batch_x,x5: batch_x,x6: batch_x, y: batch_y})
+                    training_writer.add_summary(summary[0],epoch)
 
                     #evaluate the models separately using a test set
                     if epoch % 1 == 0:
@@ -417,7 +426,7 @@ def main(unused_argv):
                         accnew,summary = sess.run([all_accuracy,merged2],feed_dict={x1: eval_x,x2: eval_x,x3: eval_x,x4: eval_x,x5: eval_x,x6: eval_x, y: eval_y})
 
                         #write the summary
-                        training_writer.add_summary(summary,epoch)
+                        testing_writer.add_summary(summary,epoch)
 
                         #save the model if it holds the highest accuracy or is tied for highest accuracy
                         if(accnew >= acc):

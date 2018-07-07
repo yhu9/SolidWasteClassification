@@ -5,7 +5,6 @@
 #############################################################################################################
 #Library imports
 import sys
-import segmentModule
 import extractionModule as analyze
 import numpy as np
 import cv2
@@ -55,7 +54,8 @@ def evaluate(original,mode,SHOWFLAG=False):
     #print('-------------HOG----------------')
     elif mode == 'hog':
         hist = analyze.extractHOG(original,False)
-        return hist
+        norm = analyze.normalize(hist)
+        return norm
 
     #if mode is gabor, extract gabor feature from image using several orientations
     elif mode == 'gabor':
@@ -74,17 +74,19 @@ def evaluate(original,mode,SHOWFLAG=False):
     #print('-------------Color----------------')
     elif mode == 'color':
         hist = analyze.extractColorHist(original,False)
-        return hist
+        norm = analyze.normalize(hist)
+        return norm
 
     elif mode == 'bin':
         hist = analyze.extractbinHist(original,False)
-        norm = analyze.normalize(hist)
+        norm = analyze.normalize(hist.astype(np.float32))
         return norm
 
     elif mode == 'hsv':
         hsvimg = cv2.cvtColor(original, cv2.COLOR_BGR2HSV)
         hist = analyze.extractHSVHist(hsvimg,False)
-        return hist
+        norm = analyze.normalize(hist.astype(np.float32))
+        return norm
 
 
 #takes a single image and extracts all features depending on flag constants
@@ -107,6 +109,12 @@ def evaluate_all(full_path,instances):
     if sizeflag:
         features.append(evaluate(original,'size',SHOWFLAG=showflag))
 
+    #double check for bad images that are completely black
+    for f in features:
+        if np.isnan(f).any() or np.isinf(f).any():
+            print('%s is NOT A GOOD IMAGE THE FILE WILL NOT BE USED!' % full_path)
+            return 0
+
     #create the full feature vector for the given instance image and push to instances
     #and also push the file name as the label for the instance
     full_vector = np.array([])
@@ -116,7 +124,7 @@ def evaluate_all(full_path,instances):
     #get the label of the instance
     group = re.findall("treematter|plywood|cardboard|bottles|trashbag|blackbag|mixed",full_path)
     if(len(group) == 0):
-        label = 'mixed'
+        label = -1
     elif(group[0] == 'treematter'):
         label = 0
     elif(group[0] == 'plywood'):
@@ -135,7 +143,7 @@ def evaluate_all(full_path,instances):
     #console output to show progress
     print("%s ---> DONE" % full_path)
 
-    #save results to shared variabl
+    #save results to shared variable
     if instances is not None:
         instances.append([full_vector,label])
 
@@ -227,13 +235,32 @@ if __name__ == '__main__':
         #write the instances and labels as one file
         analyze.writeFeatures(instances,fnameout=featurefile,label=np.array(labels))
 
-    #if user input is a directory apply to all images in directory
-    elif len(sys.argv) == 3 and sys.argv[1] == 'split':
-        print("wrong number of files as arguments expecting 3:")
-        print("argv1 = image file/directory")
-        print("argv2 + = modes of operation")
-        sys.exit()
+    #if user input is an image apply to single image
+    elif len(sys.argv) == 2 and os.path.isfile(sys.argv[1]):
 
+        image = cv2.imread(sys.argv[1],cv2.IMREAD_COLOR)
+        image = cv2.resize(image,(1000,1000),interpolation=cv2.INTER_CUBIC)
+
+        #segment the image and extract blobs
+        print("finding blobs")
+        blobs,markers,labels = analyze.extractBlobs(image,fout='ms_segments.png',hsv=False)
+        print("BLOBS FOUND!")
+
+        #evaluate each blob and extract features from them
+        tmp = []
+        for i,b in enumerate(blobs):
+            features = analyze.evaluateSegment(b,hogflag=True,gaborflag=True,colorflag=True,sizeflag=True,hsvflag=True)
+            #console output to show progress
+            print("%i of blob %i ---> FEATURES EXTRACTED" % (i + 1, len(blobs)))
+            tmp.append(features)
+
+        #create numpy array
+        instances = np.array(tmp)
+
+        #normalize the sizes across all blobs
+        instances[:,-1] = analyze.normalize(instances[:,-1])
+
+        np.save('blob_features',instances)
 
     #if less than 3 args given
     else:
