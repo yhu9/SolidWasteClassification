@@ -4,6 +4,7 @@ import sys
 import os
 import random
 import segmentModule as seg
+from matplotlib import pyplot as plt
 
 
 #user input
@@ -56,8 +57,83 @@ def majorityseg(original,mask):
 
     return blank1,blank2
 
+
+def threshseg2(original,raw_values,thresh_val=1):
+
+    #segment the image
+    if hsvsegflag:
+        hsvimg = cv2.cvtColor(original,cv2.COLOR_BGR2HSV)
+        segmented_image, labels = seg.getSegments(hsvimg,md=MIN_DENSITY)
+    else:
+        segmented_image, labels = seg.getSegments(original,md=MIN_DENSITY)
+
+    #get the threshold matrix.
+    #1. take sum of all positive predictions divided by the max value. The closer to 1 the better
+    h,w,d = raw_values.shape
+    raw_values += np.abs(np.min(raw_values,axis=2)).reshape((h,w,1))
+    raw_values /= np.max(raw_values,axis=2).reshape((h,w,1))
+    raw_values = np.nan_to_num(raw_values)
+    #means = np.mean(raw_values,axis=2).reshape((h,w,1))
+    #raw_values[raw_values < means] = 0
+    thresh_matrix = np.sum(raw_values,axis=2)
+
+    #get the mask
+    mask = raw_values.argmax(axis=2)
+
+    #obscure the low threshold pixels
+    mask[thresh_matrix > thresh_val] = -1
+    mask[thresh_matrix <= 0] = -1
+
+    #display histogram
+    h,w = thresh_matrix.shape[:2]
+    hist = thresh_matrix.reshape(h * w)
+    hist.sort()
+    plt.plot(hist)
+    plt.show()
+
+    #paint a rgb mask
+    rgb_mask = original
+    rgb_mask[mask == -1] = [0,0,0]
+    rgb_mask[mask == 0] = [0,0,255]
+    rgb_mask[mask == 1] = [0,255,0]
+    rgb_mask[mask == 2] = [255,0,0]
+    rgb_mask[mask == 3] = [0,255,255]
+    rgb_mask[mask == 4] = [255,0,255]
+    rgb_mask[mask == 5] = [255,255,0]
+
+    #create the segmented image with majority rule using classification categories
+    unique_labels = np.unique(labels)
+    blank1 = original - original
+    blank2 = original - original
+    for label in unique_labels:
+
+        #randomly paint blank1 according to meanshift labels
+        b = random.randint(0,255)
+        g = random.randint(0,255)
+        r = random.randint(0,255)
+        blank1[labels == label] = [b,g,r]
+
+        #find majority category and paint blank2
+        majority = -1
+        for cat in CATS:
+            tmp = rgb_mask[labels == label]
+            count = np.count_nonzero(np.all(tmp == cat,axis=1))
+            if count > majority:
+                classification = cat
+                majority = count
+        blank2[labels == label] = classification
+
+    #show the results
+    cv2.imshow('ms_segmentation',blank1)
+    cv2.imshow('majority segmentation',blank2)
+    cv2.imshow('thresholding mask',rgb_mask)
+    cv2.waitKey(0)
+
+    return blank1,blank2,rgb_mask
+
+
 #segmentation with thresholding on raw cnn output
-def threshseg(original,raw_values,thresh_val='mean'):
+def threshseg(original,raw_values,thresh_val='median'):
 
     #segment the image
     if hsvsegflag:
@@ -188,15 +264,21 @@ if __name__ == '__main__':
             img = original
 
         #read the threshold option if it exists
-        if 'thresh' in sys.argv:
+        if 'thresh' in sys.argv and len(sys.argv) > 4:
             index = sys.argv.index('thresh')
             index += 1
             thresh_val = sys.argv[index]
 
             #get the thresholding segmentation
-            ms_segmentation, majority_segmentation,thresh_mask = threshseg(img,raws,thresh_val=thresh_val)
+            if len(sys.argv) > 4 and sys.argv[3] == 'masathresh':
+                ms_segmentation, majority_segmentation,thresh_mask = threshseg2(img,raws,thresh_val=float(thresh_val))
+            else:
+                ms_segmentation, majority_segmentation,thresh_mask = threshseg(img,raws,thresh_val=float(thresh_val))
         else:
-            ms_segmentation, majority_segmentation,thresh_mask = threshseg(img,raws)
+            if len(sys.argv) == 4 and sys.argv[3] == 'masathresh':
+                ms_segmentation, majority_segmentation,thresh_mask = threshseg2(img,raws)
+            else:
+                ms_segmentation, majority_segmentation,thresh_mask = threshseg(img,raws)
 
         #create the results directory
         if not os.path.exists('results'):
@@ -209,6 +291,11 @@ if __name__ == '__main__':
         cv2.imwrite(fout1,ms_segmentation)
         cv2.imwrite(fout2,majority_segmentation)
         cv2.imwrite(fout3,thresh_mask)
+    else:
+        print('error with python arguments to program')
+        print('expecting:')
+        print('python threshseg.py [img_dir] [rawvalues_dir] [thresh/nothresh/masathresh]')
 
-        quit()
+
+
 

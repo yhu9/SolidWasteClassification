@@ -376,12 +376,13 @@ def main(unused_argv):
                 for epoch in range(constants.CNN_EPOCHS):
 
                     #get an image batch and train each model separately
-                    batch_x1,batch_y1 = featureReader.getBatch(constants.BATCH_SIZE,'treematter')
-                    batch_x2,batch_y2 = featureReader.getBatch(constants.BATCH_SIZE,'plywood')
-                    batch_x3,batch_y3 = featureReader.getBatch(constants.BATCH_SIZE,'cardboard')
-                    batch_x4,batch_y4 = featureReader.getBatch(constants.BATCH_SIZE,'bottles')
-                    batch_x5,batch_y5 = featureReader.getBatch(constants.BATCH_SIZE,'trashbag')
-                    batch_x6,batch_y6 = featureReader.getBatch(constants.BATCH_SIZE,'blackbag')
+                    batch_x1,batch_y1 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='treematter')
+                    batch_x2,batch_y2 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='plywood')
+                    batch_x3,batch_y3 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='cardboard')
+                    batch_x4,batch_y4 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='bottles')
+                    batch_x5,batch_y5 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='trashbag')
+                    batch_x6,batch_y6 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='blackbag')
+
 
                     #merge summaries
                     merged1 = tf.summary.merge([acc_sum1,acc_sum2,acc_sum3,acc_sum4,acc_sum5,acc_sum6,cost_sum1,cost_sum2,cost_sum3,cost_sum4,cost_sum5,cost_sum6])
@@ -396,7 +397,7 @@ def main(unused_argv):
                     training_writer.add_summary(training_log,epoch)
 
                     #run the final optimizer
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE)
+                    batch_x,batch_y = featureReader.getTrainingBatch(constants.BATCH_SIZE)
                     merged2 = tf.summary.merge([allcost_sum,allacc_sum])
                     summary = sess.run([merged2,all_reduced,all_optimizer],feed_dict={x1: batch_x,x2: batch_x,x3: batch_x,x4: batch_x,x5: batch_x,x6: batch_x, y: batch_y})
                     training_writer.add_summary(summary[0],epoch)

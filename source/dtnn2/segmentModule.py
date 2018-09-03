@@ -40,6 +40,118 @@ MIN_DENSITY = 10000
 SPATIAL_RADIUS = 5
 RANGE_RADIUS = 5
 
+
+#########################################################################################################################
+#tile the image
+#########################################################################################################################
+#tiles the foreground onto the background
+def getTiledSegment(segment,fgmask):
+    #find a colored spot we can tile the image with
+    h,w = segment.shape[:2]
+
+    #FIND A POINT ON THE FOREGROUND. if foreground is not in the center, center the mask and the image
+    cy,cx = math.ceil(h/2),math.ceil(w/2)
+    if not fgmask[cy,cx]:
+        cys,cxs = np.where(fgmask == True)
+        idcenter = math.ceil(len(cys) / 2)
+        hdiff = abs(cy - cys[idcenter]) * 2
+        wdiff = abs(cx - cxs[idcenter]) * 2
+        height = h + hdiff
+        width = w + wdiff
+        centeredmask = np.zeros((height,width))
+        centeredsegment = np.zeros((height,width,3))
+        if cy < cys[idcenter]:
+            hdiff = 0
+        if cx < cxs[idcenter]:
+            wdiff = 0
+        centeredsegment[hdiff:hdiff+h,wdiff:wdiff+w] = segment
+        centeredmask[hdiff:hdiff+h,wdiff:wdiff+w] = fgmask
+
+        #reset segment and fgmask and h,w
+        segment = centeredsegment
+        fgmask = centeredmask.astype(bool)
+        h,w = segment.shape[:2]
+
+        cy,cx = math.ceil(h/2),math.ceil(w/2)
+
+    #initialize tiled image/mask and condition for fulfillment
+    tiled_img = np.zeros((h*5,w*5,3))
+    tiled_mask = np.zeros((h*5,w*5))
+    filled = False
+
+    #tile image until no background is left
+    while not filled:
+        #get pixel location of unfilled background take the points that are within a bounding box
+        #TAKE PIXELS WITHIN BOUNDRIES
+        ys,xs = np.where(tiled_mask == False)
+        tmp_truthmap = np.logical_and(np.logical_and(ys >= 2*h, ys < h*3),np.logical_and(xs >= 2*w,xs < w*3))
+        ys = ys[tmp_truthmap]
+        xs = xs[tmp_truthmap]
+        centerid = int(len(ys) / 2)
+
+        #find bounding boxes for the background, and the portion of the foreground we are using
+        xlow = xs[centerid] - math.ceil(w / 2)
+        xhigh = xs[centerid] + int(w / 2)
+        ylow = ys[centerid] - math.ceil(h / 2)
+        yhigh = ys[centerid] + int(h / 2)
+
+        #append the foreground onto the tiled_img and update the tiled_mask
+        tmpimg = tiled_img[ylow:yhigh,xlow:xhigh]
+        tmpmask = tiled_mask[ylow:yhigh,xlow:xhigh]
+        tmpimg[fgmask] = segment[fgmask]
+        tmpmask = np.logical_or(tmpmask,fgmask)
+        tiled_img[ylow:yhigh,xlow:xhigh] = tmpimg
+        tiled_mask[ylow:yhigh,xlow:xhigh] = tmpmask
+
+        #get pixel location of unfilled background take the points that are within a bounding box
+        #TAKE PIXELS WITHIN BOUNDRIES
+        ys,xs = np.where(tiled_mask == False)
+        tmp_truthmap = np.logical_and(np.logical_and(ys >= 2*h, ys < h*3),np.logical_and(xs >= 2*w,xs < w*3))
+        ys = ys[tmp_truthmap]
+        xs = xs[tmp_truthmap]
+        filled = (len(ys) == 0 or len(xs) == 0)
+
+    #put back the foreground ontop of the tiled background
+    tmpimg = tiled_img[h*2:h*3,w*2:w*3]
+    tmpimg[fgmask] = segment[fgmask]
+    tiled_img[h*2:h*3,w*2:w*3] = tmpimg
+
+    #return tiled image as a np.int8
+    return tiled_img[h*2:h*3,w*2:w*3].astype(np.uint8)
+
+#saves the tiled foreground images
+def saveTiledSegments(img,labels,category='',outdir='testing'):
+
+    uq_labels = np.unique(labels)
+    #for each unique marker crop the image with or without background and save it to the output directory
+    count = 0
+    for l in uq_labels[1:]:
+        segment = img.copy()
+
+        #black out the background
+        segment[labels != l] = [0,0,0]
+
+        #opencv bounding rect only works on single channel images... we cut out the segment from the image
+        blank = img.copy()
+        blank = blank - blank
+        blank[labels == l] = [255,255,255]
+        grey = cv2.cvtColor(blank,cv2.COLOR_BGR2GRAY)
+        x,y,w,h = cv2.boundingRect(grey)
+
+        #crop the image and the mask to the segment in question
+        cropped = segment[y:y+h,x:x+w]
+        mask = labels[y:y+h,x:x+w]
+
+        #tile the foreground onto the background
+        tiled = getTiledSegment(cropped,mask == l)
+
+        #save the file with a unique name
+        f_out =  str(count) + "_" + category
+        fout = os.path.join(outdir,f_out)
+        cv2.imwrite(fout,tiled)
+        count += 1
+
+#########################################################################################################################
 #saves the segments of the original image as png files given the labels
 '''
 input:  original image
@@ -153,4 +265,21 @@ def getSegments(original, SHOW=False,sr=SPATIAL_RADIUS,rr=RANGE_RADIUS,md=MIN_DE
     ################################################################################
 
     return segmented_image, labels_image
+
+
+#################################################################################
+#TEST THE FUNCTIONS
+if __name__ == '__main__':
+
+    TESTIMG = 'categories/test_images/lenasmall.jpg'
+    DIROUT = 'testing/'
+    img = cv2.imread(TESTIMG,cv2.IMREAD_COLOR)
+    imgname = "lenasmall.jpg"
+
+    segimg,segmask = getSegments(img,sr=1,rr=1,md=1000)
+    saveTiledSegments(img,segmask,category=imgname,outdir='')
+
+    cv2.imshow('original',img)
+    cv2.imshow('segmentation', segimg)
+
 

@@ -16,12 +16,26 @@ def saveMSSegments(directory,dirout='',bg=False):
     cat1_list = os.listdir(directory)
     for f1 in cat1_list:
         full_dir1 = directory + f1
+        fileout = os.path.splitext(f1)[0] + '.png'
 
         tmp = cv2.imread(full_dir1,cv2.IMREAD_COLOR)
         original = cv2.resize(tmp,(1000,1000),interpolation=cv2.INTER_CUBIC)
 
         segmented_image, labels = segmentModule.getSegments(original,False,md=1000,rr=1,sr=1)
-        segmentModule.saveSegments(original,labels,dirout,f1,showbg=bg)
+        segmentModule.saveSegments(original,labels,dirout,fileout,showbg=bg)
+
+#saves the tiled segmentations of the images
+def saveTiledSegments(directory,dirout='',bg=False):
+
+    cat1_list = os.listdir(directory)
+    for f1 in cat1_list:
+        full_dir1 = directory + f1
+        img = cv2.imread(full_dir1,cv2.IMREAD_COLOR)
+
+        original = cv2.resize(img,(1000,1000),interpolation=cv2.INTER_CUBIC)
+
+        segimg,segmask = segmentModule.getSegments(original,sr=1,rr=1,md=1000)
+        segmentModule.saveTiledSegments(original,segmask,category=f1,outdir=dirout)
 
 #for each image in drectory get the HSV segments and save them
 '''
@@ -35,24 +49,26 @@ def saveMSSegmentsHSV(directory,dirout='',bg=False):
     cat1_list = os.listdir(directory)
     for f1 in cat1_list:
         full_dir1 = directory + f1
+        fileout = os.path.splitext(f1)[0] + '.png'
 
         image1 = cv2.imread(full_dir1,cv2.IMREAD_COLOR)
         original = cv2.cvtColor(image1, cv2.COLOR_BGR2HSV)
 
         seg_img, labels = segmentModule.getSegments(original,False,rr=5,sr=5)
-        segmentModule.saveSegments(original,labels,dirout,f1,showbg=bg)
+        segmentModule.saveSegments(original,labels,dirout,fileout,showbg=bg)
 
 def saveMSSegmentsBGRHSV(directory,dirout='',bg=False):
     cat1_list = os.listdir(directory)
     for f1 in cat1_list:
         full_dir1 = directory + f1
+        fileout = os.path.splitext(f1)[0] + '.png'
 
         bgr_img = cv2.imread(full_dir1,cv2.IMREAD_COLOR)
         bgr_small = cv2.resize(bgr_img,(1000,1000),interpolation=cv2.INTER_CUBIC)
         hsv_img = cv2.cvtColor(bgr_small, cv2.COLOR_BGR2HSV)
 
         seg_img, labels = segmentModule.getSegments(hsv_img,False,md=1000,rr=5,sr=5)
-        segmentModule.saveSegments(bgr_small,labels,dirout,f1,showbg=bg)
+        segmentModule.saveSegments(bgr_small,labels,dirout,fileout,showbg=bg)
 
 #helper function which flips an image
 '''
@@ -146,6 +162,9 @@ if __name__ == '__main__':
     if len(sys.argv) >= 4 and (sys.argv[1] == 'save' or sys.argv[1] == 'savergb'):
         saveMSSegments(sys.argv[2],dirout=sys.argv[3],bg=showbg)
 
+    elif len(sys.argv) >= 4 and (sys.argv[1] == 'savetile'):
+        saveTiledSegments(sys.argv[2],dirout=sys.argv[3],bg=showbg)
+
     #save hsv
     elif len(sys.argv) >= 4 and sys.argv[1] == 'savehsv':
         saveMSSegmentsHSV(sys.argv[2],dirout=sys.argv[3],bg=showbg)
@@ -160,6 +179,7 @@ if __name__ == '__main__':
 
     elif sys.argv[1] =='debug':
         print(sys.argv[3])
+
     #otherwise the mode is wrong
     else:
         print("WRONG MODE and args")

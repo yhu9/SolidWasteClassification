@@ -154,9 +154,10 @@ def main(unused_argv):
         #magic number = width * height * n_convout
         magic_number = int((constants.CNN_LOCAL1 + constants.CNN_GLOBAL) * (constants.IMG_SIZE * constants.IMG_SIZE))
 
+
         #tree matter convolution
         with tf.name_scope('treematter'):
-            weights['w_treematter'] = tf.Variable(tf.random_normal([7,7,constants.IMG_DEPTH,constants.CNN_LOCAL1]))
+            weights['w_treematter'] = tf.Variable(tf.random_normal([7,7,3,constants.CNN_LOCAL1]))
             biases['b_treematter'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             tree_conv1 = tf.nn.conv2d(x1,weights['w_treematter'],strides=[1,1,1,1],padding='SAME',name='tree_tree1')
             tree1 = tf.nn.relu(tree_conv1 + biases['b_treematter'])
@@ -164,7 +165,7 @@ def main(unused_argv):
             biases['b_treematter_p1b'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             tree_conv2 = tf.nn.conv2d(tree1,weights['w_treematter_p1b'],strides=[1,1,1,1],padding='SAME',name='tree_tree2')
             tree2 = tf.nn.relu(tree_conv2 + biases['b_treematter_p1b'])
-            weights['w_treematter_global'] = tf.Variable(tf.random_normal([13,13,constants.IMG_DEPTH,constants.CNN_GLOBAL]))
+            weights['w_treematter_global'] = tf.Variable(tf.random_normal([13,13,3,constants.CNN_GLOBAL]))
             biases['b_treematter_global'] = tf.Variable(tf.random_normal([constants.CNN_GLOBAL]))
             gtree_conv1 = tf.nn.conv2d(x1,weights['w_treematter_global'],strides=[1,1,1,1],padding='SAME',name='global_tree')
             tree3 = tf.nn.relu(gtree_conv1 + biases['b_treematter_global'])
@@ -173,20 +174,10 @@ def main(unused_argv):
             biases['out1'] = tf.Variable(tf.random_normal([1]))
             output1 = tf.reshape(tree_activations,[-1,magic_number])
             predictions1 = tf.matmul(output1,weights['out1'])+biases['out1']
-            with tf.name_scope('cost'):
-                cost1 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions1,labels=y1)
-                reduced1 = tf.reduce_mean(cost1)
-                cost_sum1 = tf.summary.scalar('cost1',reduced1)
-            with tf.name_scope('optimizer'):
-                optimizer1= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost1)
-            with tf.name_scope('accuracy'):
-                correct_prediction1 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions1)),y1),tf.float32)
-                accuracy1 = tf.reduce_mean(correct_prediction1)
-                acc_sum1 = tf.summary.scalar('accuracy1',accuracy1)
 
         #plywood matter convolution
         with tf.name_scope('plywood'):
-            weights['w_plywoodmatter'] = tf.Variable(tf.random_normal([7,7,constants.IMG_DEPTH,constants.CNN_LOCAL1]))
+            weights['w_plywoodmatter'] = tf.Variable(tf.random_normal([7,7,3,constants.CNN_LOCAL1]))
             biases['b_plywoodmatter'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             plywood_conv1 = tf.nn.conv2d(x2,weights['w_plywoodmatter'],strides=[1,1,1,1],padding='SAME',name='plywood_plywood1')
             plywood1 = tf.nn.relu(plywood_conv1 + biases['b_plywoodmatter'])
@@ -194,7 +185,7 @@ def main(unused_argv):
             biases['b_plywoodmatter_p1b'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             plywood_conv2 = tf.nn.conv2d(plywood1,weights['w_plywoodmatter_p1b'],strides=[1,1,1,1],padding='SAME',name='plywood_plywood2')
             plywood2 = tf.nn.relu(plywood_conv2 + biases['b_plywoodmatter_p1b'])
-            weights['w_plywoodmatter_global'] = tf.Variable(tf.random_normal([13,13,constants.IMG_DEPTH,constants.CNN_GLOBAL]))
+            weights['w_plywoodmatter_global'] = tf.Variable(tf.random_normal([13,13,3,constants.CNN_GLOBAL]))
             biases['b_plywoodmatter_global'] = tf.Variable(tf.random_normal([constants.CNN_GLOBAL]))
             gplywood_conv1 = tf.nn.conv2d(x2,weights['w_plywoodmatter_global'],strides=[1,1,1,1],padding='SAME',name='global_plywood')
             plywood3 = tf.nn.relu(gplywood_conv1 + biases['b_plywoodmatter_global'])
@@ -203,20 +194,10 @@ def main(unused_argv):
             biases['out1'] = tf.Variable(tf.random_normal([1]))
             output1 = tf.reshape(plywood_activations,[-1,magic_number])
             predictions2 = tf.matmul(output1,weights['out1'])+biases['out1']
-            with tf.name_scope('cost'):
-                cost2 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions2,labels=y2)
-                reduced2 = tf.reduce_mean(cost2)
-                cost_sum2 = tf.summary.scalar('cost2',reduced2)
-            with tf.name_scope('optimizer'):
-                optimizer2= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost2)
-            with tf.name_scope('accuracy'):
-                correct_prediction2 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions2)),y2),tf.float32)
-                accuracy2 = tf.reduce_mean(correct_prediction2)
-                acc_sum2 = tf.summary.scalar('accuracy2',accuracy2)
 
         #cardboard matter convolution
         with tf.name_scope('cardboard'):
-            weights['w_cardboardmatter'] = tf.Variable(tf.random_normal([7,7,constants.IMG_DEPTH,constants.CNN_LOCAL1]))
+            weights['w_cardboardmatter'] = tf.Variable(tf.random_normal([7,7,3,constants.CNN_LOCAL1]))
             biases['b_cardboardmatter'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             cardboard_conv1 = tf.nn.conv2d(x3,weights['w_cardboardmatter'],strides=[1,1,1,1],padding='SAME',name='cardboard_cardboard1')
             cardboard1 = tf.nn.relu(cardboard_conv1 + biases['b_cardboardmatter'])
@@ -224,7 +205,7 @@ def main(unused_argv):
             biases['b_cardboardmatter_p1b'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             cardboard_conv2 = tf.nn.conv2d(cardboard1,weights['w_cardboardmatter_p1b'],strides=[1,1,1,1],padding='SAME',name='cardboard_cardboard2')
             cardboard2 = tf.nn.relu(cardboard_conv2 + biases['b_cardboardmatter_p1b'])
-            weights['w_cardboardmatter_global'] = tf.Variable(tf.random_normal([13,13,constants.IMG_DEPTH,constants.CNN_GLOBAL]))
+            weights['w_cardboardmatter_global'] = tf.Variable(tf.random_normal([13,13,3,constants.CNN_GLOBAL]))
             biases['b_cardboardmatter_global'] = tf.Variable(tf.random_normal([constants.CNN_GLOBAL]))
             gcardboard_conv1 = tf.nn.conv2d(x3,weights['w_cardboardmatter_global'],strides=[1,1,1,1],padding='SAME',name='global_cardboard')
             cardboard3 = tf.nn.relu(gcardboard_conv1 + biases['b_cardboardmatter_global'])
@@ -233,20 +214,10 @@ def main(unused_argv):
             biases['out1'] = tf.Variable(tf.random_normal([1]))
             output1 = tf.reshape(cardboard_activations,[-1,magic_number])
             predictions3 = tf.matmul(output1,weights['out1'])+biases['out1']
-            with tf.name_scope('cost'):
-                cost3 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions3,labels=y3)
-                reduced3 = tf.reduce_mean(cost3)
-                cost_sum3 = tf.summary.scalar('cost3',reduced3)
-            with tf.name_scope('optimizer'):
-                optimizer3= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost3)
-            with tf.name_scope('accuracy'):
-                correct_prediction3 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions3)),y3),tf.float32)
-                accuracy3 = tf.reduce_mean(correct_prediction3)
-                acc_sum3 = tf.summary.scalar('accuracy3',accuracy3)
 
         #bottles matter convolution
         with tf.name_scope('bottles'):
-            weights['w_bottlesmatter'] = tf.Variable(tf.random_normal([7,7,constants.IMG_DEPTH,constants.CNN_LOCAL1]))
+            weights['w_bottlesmatter'] = tf.Variable(tf.random_normal([7,7,3,constants.CNN_LOCAL1]))
             biases['b_bottlesmatter'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             bottles_conv1 = tf.nn.conv2d(x4,weights['w_bottlesmatter'],strides=[1,1,1,1],padding='SAME',name='bottles_bottles1')
             bottles1 = tf.nn.relu(bottles_conv1 + biases['b_bottlesmatter'])
@@ -254,7 +225,7 @@ def main(unused_argv):
             biases['b_bottlesmatter_p1b'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             bottles_conv2 = tf.nn.conv2d(bottles1,weights['w_bottlesmatter_p1b'],strides=[1,1,1,1],padding='SAME',name='bottles_bottles2')
             bottles2 = tf.nn.relu(bottles_conv2 + biases['b_bottlesmatter_p1b'])
-            weights['w_bottlesmatter_global'] = tf.Variable(tf.random_normal([13,13,constants.IMG_DEPTH,constants.CNN_GLOBAL]))
+            weights['w_bottlesmatter_global'] = tf.Variable(tf.random_normal([13,13,3,constants.CNN_GLOBAL]))
             biases['b_bottlesmatter_global'] = tf.Variable(tf.random_normal([constants.CNN_GLOBAL]))
             gbottles_conv1 = tf.nn.conv2d(x4,weights['w_bottlesmatter_global'],strides=[1,1,1,1],padding='SAME',name='global_bottles')
             bottles3 = tf.nn.relu(gbottles_conv1 + biases['b_bottlesmatter_global'])
@@ -263,20 +234,10 @@ def main(unused_argv):
             biases['out1'] = tf.Variable(tf.random_normal([1]))
             output1 = tf.reshape(bottles_activations,[-1,magic_number])
             predictions4 = tf.matmul(output1,weights['out1'])+biases['out1']
-            with tf.name_scope('cost'):
-                cost4 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions4,labels=y4)
-                reduced4 = tf.reduce_mean(cost4)
-                cost_sum4 = tf.summary.scalar('cost4',reduced4)
-            with tf.name_scope('optimizer'):
-                optimizer4= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost4)
-            with tf.name_scope('accuracy'):
-                correct_prediction4 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions4)),y4),tf.float32)
-                accuracy4 = tf.reduce_mean(correct_prediction4)
-                acc_sum4 = tf.summary.scalar('accuracy4',accuracy4)
 
         #pbag matter convolution
         with tf.name_scope('plasticbags'):
-            weights['w_pbagmatter'] = tf.Variable(tf.random_normal([7,7,constants.IMG_DEPTH,constants.CNN_LOCAL1]))
+            weights['w_pbagmatter'] = tf.Variable(tf.random_normal([7,7,3,constants.CNN_LOCAL1]))
             biases['b_pbagmatter'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             pbag_conv1 = tf.nn.conv2d(x5,weights['w_pbagmatter'],strides=[1,1,1,1],padding='SAME',name='pbag_pbag1')
             pbag1 = tf.nn.relu(pbag_conv1 + biases['b_pbagmatter'])
@@ -284,7 +245,7 @@ def main(unused_argv):
             biases['b_pbagmatter_p1b'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             pbag_conv2 = tf.nn.conv2d(pbag1,weights['w_pbagmatter_p1b'],strides=[1,1,1,1],padding='SAME',name='pbag_pbag2')
             pbag2 = tf.nn.relu(pbag_conv2 + biases['b_pbagmatter_p1b'])
-            weights['w_pbagmatter_global'] = tf.Variable(tf.random_normal([13,13,constants.IMG_DEPTH,constants.CNN_GLOBAL]))
+            weights['w_pbagmatter_global'] = tf.Variable(tf.random_normal([13,13,3,constants.CNN_GLOBAL]))
             biases['b_pbagmatter_global'] = tf.Variable(tf.random_normal([constants.CNN_GLOBAL]))
             gpbag_conv1 = tf.nn.conv2d(x5,weights['w_pbagmatter_global'],strides=[1,1,1,1],padding='SAME',name='global_pbag')
             pbag3 = tf.nn.relu(gpbag_conv1 + biases['b_pbagmatter_global'])
@@ -293,20 +254,10 @@ def main(unused_argv):
             biases['out1'] = tf.Variable(tf.random_normal([1]))
             output1 = tf.reshape(pbag_activations,[-1,magic_number])
             predictions5 = tf.matmul(output1,weights['out1'])+biases['out1']
-            with tf.name_scope('cost'):
-                cost5 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions5,labels=y5)
-                reduced5 = tf.reduce_mean(cost5)
-                cost_sum5 = tf.summary.scalar('cost5',reduced5)
-            with tf.name_scope('optimizer'):
-                optimizer5= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost5)
-            with tf.name_scope('accuracy'):
-                correct_prediction5 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions5)),y5),tf.float32)
-                accuracy5 = tf.reduce_mean(correct_prediction5)
-                acc_sum5 = tf.summary.scalar('accuracy5',accuracy5)
 
         #bbag matter convolution
         with tf.name_scope('black_bag'):
-            weights['w_bbagmatter'] = tf.Variable(tf.random_normal([7,7,constants.IMG_DEPTH,constants.CNN_LOCAL1]))
+            weights['w_bbagmatter'] = tf.Variable(tf.random_normal([7,7,3,constants.CNN_LOCAL1]))
             biases['b_bbagmatter'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             bbag_conv1 = tf.nn.conv2d(x6,weights['w_bbagmatter'],strides=[1,1,1,1],padding='SAME',name='bbag_bbag1')
             bbag1 = tf.nn.relu(bbag_conv1 + biases['b_bbagmatter'])
@@ -314,7 +265,7 @@ def main(unused_argv):
             biases['b_bbagmatter_p1b'] = tf.Variable(tf.random_normal([constants.CNN_LOCAL1]))
             bbag_conv2 = tf.nn.conv2d(bbag1,weights['w_bbagmatter_p1b'],strides=[1,1,1,1],padding='SAME',name='bbag_bbag2')
             bbag2 = tf.nn.relu(bbag_conv2 + biases['b_bbagmatter_p1b'])
-            weights['w_bbagmatter_global'] = tf.Variable(tf.random_normal([13,13,constants.IMG_DEPTH,constants.CNN_GLOBAL]))
+            weights['w_bbagmatter_global'] = tf.Variable(tf.random_normal([13,13,3,constants.CNN_GLOBAL]))
             biases['b_bbagmatter_global'] = tf.Variable(tf.random_normal([constants.CNN_GLOBAL]))
             gbbag_conv1 = tf.nn.conv2d(x6,weights['w_bbagmatter_global'],strides=[1,1,1,1],padding='SAME',name='global_bbag')
             bbag3 = tf.nn.relu(gbbag_conv1 + biases['b_bbagmatter_global'])
@@ -323,16 +274,48 @@ def main(unused_argv):
             biases['out1'] = tf.Variable(tf.random_normal([1]))
             output1 = tf.reshape(bbag_activations,[-1,magic_number])
             predictions6 = tf.matmul(output1,weights['out1'])+biases['out1']
-            with tf.name_scope('cost'):
-                cost6 = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions6,labels=y6)
-                reduced6 = tf.reduce_mean(cost6)
-                cost_sum6 = tf.summary.scalar('cost6',reduced6)
-            with tf.name_scope('optimizer'):
-                optimizer6= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost6)
-            with tf.name_scope('accuracy'):
-                correct_prediction6 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions6)),y6),tf.float32)
-                accuracy6 = tf.reduce_mean(correct_prediction6)
-                acc_sum6 = tf.summary.scalar('accuracy6',accuracy6)
+
+        #define optimization and accuracy creation
+        with tf.name_scope('cost'):
+            cost1 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions1,labels=y1))
+            cost2 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions2,labels=y2))
+            cost3 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions3,labels=y3))
+            cost4 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions4,labels=y4))
+            cost5 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions5,labels=y5))
+            cost6 = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions6,labels=y6))
+            cost_sum1 = tf.summary.scalar('treecost',cost1)
+            cost_sum2 = tf.summary.scalar('plywoodcost',cost2)
+            cost_sum3 = tf.summary.scalar('cardboardcost',cost3)
+            cost_sum4 = tf.summary.scalar('bottlescost',cost4)
+            cost_sum5 = tf.summary.scalar('pbagcost',cost5)
+            cost_sum6 = tf.summary.scalar('bbagcost',cost6)
+        with tf.name_scope('optimizer'):
+            optimizer1= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost1)
+            optimizer2= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost2)
+            optimizer3= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost3)
+            optimizer4= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost4)
+            optimizer5= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost5)
+            optimizer6= tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(cost6)
+        with tf.name_scope('accuracy'):
+            correct_prediction1 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions1)),y1),tf.float32)
+            correct_prediction2 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions2)),y2),tf.float32)
+            correct_prediction3 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions3)),y3),tf.float32)
+            correct_prediction4 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions4)),y4),tf.float32)
+            correct_prediction5 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions5)),y5),tf.float32)
+            correct_prediction6 = tf.cast(tf.equal(tf.round(tf.nn.sigmoid(predictions6)),y6),tf.float32)
+
+            accuracy1 = tf.reduce_mean(correct_prediction1)
+            accuracy2 = tf.reduce_mean(correct_prediction2)
+            accuracy3 = tf.reduce_mean(correct_prediction3)
+            accuracy4 = tf.reduce_mean(correct_prediction4)
+            accuracy5 = tf.reduce_mean(correct_prediction5)
+            accuracy6 = tf.reduce_mean(correct_prediction6)
+            acc_sum1 = tf.summary.scalar('tree_accuracy',accuracy1)
+            acc_sum2 = tf.summary.scalar('plywood_accuracy',accuracy2)
+            acc_sum3 = tf.summary.scalar('cardboard_accuracy',accuracy3)
+            acc_sum4 = tf.summary.scalar('bottles_accuracy',accuracy4)
+            acc_sum5 = tf.summary.scalar('pbag_accuracy',accuracy5)
+            acc_sum6 = tf.summary.scalar('bbag_accuracy',accuracy6)
 
         #stack all convoluted outputs from each model
         with tf.name_scope('all_combined'):
@@ -351,7 +334,7 @@ def main(unused_argv):
             biases['b_all'] = tf.Variable(tf.random_normal([constants.CLASSES]))
             predictions_final = tf.matmul(fc_activation2,weights['w_all']) + biases['b_all']
             predictions_out = tf.nn.sigmoid(predictions_final)
-            all_cost = tf.nn.sigmoid_cross_entropy_with_logits(logits=predictions_final,labels=y)
+            all_cost = tf.nn.softmax_cross_entropy_with_logits(logits=predictions_final,labels=y)
             all_reduced = tf.reduce_mean(all_cost)
             allcost_sum = tf.summary.scalar('all_cost',all_reduced)
 
@@ -359,7 +342,7 @@ def main(unused_argv):
             all_optimizer = tf.train.AdamOptimizer(constants.LEARNING_RATE).minimize(all_cost,var_list=var_list1)
             all_correct = tf.cast(tf.equal(tf.argmax(predictions_final,1),tf.argmax(y,1)),tf.float32)
             all_accuracy = tf.reduce_mean(all_correct)
-            allacc_sum = tf.summary.scalar('all_acc',all_accuracy)
+            allacc_sum= tf.summary.scalar('all_accuracy',all_accuracy)
 
         #################################################################################################################
         #################################################################################################################
@@ -376,6 +359,7 @@ def main(unused_argv):
             #net = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
             #with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,log_device_placement=True)) as sess:
             with tf.Session() as sess:
+                merged = tf.summary.merge_all()
                 training_writer = tf.summary.FileWriter('./log/training',sess.graph)
                 testing_writer = tf.summary.FileWriter('./log/testing',sess.graph)
                 sess.run(init)
@@ -392,12 +376,13 @@ def main(unused_argv):
                 for epoch in range(constants.CNN_EPOCHS):
 
                     #get an image batch and train each model separately
-                    batch_x1,batch_y1 = featureReader.getBatch(constants.BATCH_SIZE,'treematter')
-                    batch_x2,batch_y2 = featureReader.getBatch(constants.BATCH_SIZE,'plywood')
-                    batch_x3,batch_y3 = featureReader.getBatch(constants.BATCH_SIZE,'cardboard')
-                    batch_x4,batch_y4 = featureReader.getBatch(constants.BATCH_SIZE,'bottles')
-                    batch_x5,batch_y5 = featureReader.getBatch(constants.BATCH_SIZE,'trashbag')
-                    batch_x6,batch_y6 = featureReader.getBatch(constants.BATCH_SIZE,'blackbag')
+                    batch_x1,batch_y1 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='treematter')
+                    batch_x2,batch_y2 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='plywood')
+                    batch_x3,batch_y3 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='cardboard')
+                    batch_x4,batch_y4 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='bottles')
+                    batch_x5,batch_y5 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='trashbag')
+                    batch_x6,batch_y6 = featureReader.getTrainingBatch(constants.BATCH_SIZE,catname='blackbag')
+
 
                     #merge summaries
                     merged1 = tf.summary.merge([acc_sum1,acc_sum2,acc_sum3,acc_sum4,acc_sum5,acc_sum6,cost_sum1,cost_sum2,cost_sum3,cost_sum4,cost_sum5,cost_sum6])
@@ -412,8 +397,8 @@ def main(unused_argv):
                     training_writer.add_summary(training_log,epoch)
 
                     #run the final optimizer
-                    batch_x,batch_y = featureReader.getBatch(constants.BATCH_SIZE)
-                    merged2 = tf.summary.merge([allcost_sum])
+                    batch_x,batch_y = featureReader.getTrainingBatch(constants.BATCH_SIZE)
+                    merged2 = tf.summary.merge([allcost_sum,allacc_sum])
                     summary = sess.run([merged2,all_reduced,all_optimizer],feed_dict={x1: batch_x,x2: batch_x,x3: batch_x,x4: batch_x,x5: batch_x,x6: batch_x, y: batch_y})
                     training_writer.add_summary(summary[0],epoch)
 
@@ -421,12 +406,16 @@ def main(unused_argv):
                     if epoch % 1 == 0:
                         #record summaries
                         #evaluate overall model on test set
-                        eval_x,eval_y = featureReader.getBatch(constants.BATCH_SIZE)
-                        merged2 = tf.summary.merge([allacc_sum,allcost_sum])
-                        accnew,summary = sess.run([all_accuracy,merged2],feed_dict={x1: eval_x,x2: eval_x,x3: eval_x,x4: eval_x,x5: eval_x,x6: eval_x, y: eval_y})
+                        eval_x,eval_y,eval_y1,eval_y2,eval_y3,eval_y4,eval_y5,eval_y6 = featureReader.getTestingBatch(constants.BATCH_SIZE)
+                        merged2 = tf.summary.merge([allacc_sum,allcost_sum,cost_sum1,cost_sum2,cost_sum3,cost_sum4,cost_sum5,cost_sum6,acc_sum1,acc_sum2,acc_sum3,acc_sum4,acc_sum5,acc_sum6])
+                        accnew,summary = sess.run([all_accuracy,merged2],feed_dict={x1: eval_x,x2: eval_x,x3: eval_x,x4: eval_x,x5: eval_x,x6: eval_x, y: eval_y, y1: eval_y1, y2: eval_y2, y3: eval_y3, y4: eval_y4, y5: eval_y5, y6: eval_y6})
 
                         #write the summary
                         testing_writer.add_summary(summary,epoch)
+
+                        #record summaries
+                        #summary = sess.run(merged,feed_dict={x1:eval_x, x2:eval_x,x3: eval_x,x4:eval_x,x5:eval_x,x6:eval_x,y:eval_y})
+                        #training_writer.add_summary(summary,epoch)
 
                         #save the model if it holds the highest accuracy or is tied for highest accuracy
                         if(accnew >= acc):
@@ -446,14 +435,12 @@ def main(unused_argv):
 
             #read the image
             if os.path.isfile(sys.argv[2]):
-                original = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
-                h,w = original.shape[:2]
+                tmp = cv2.imread(sys.argv[2],cv2.IMREAD_COLOR)
+                h,w = tmp.shape[:2]
                 if(h >= constants.FULL_IMGSIZE or w >= constants.FULL_IMGSIZE):
-                    image = cv2.resize(original,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
+                    image = cv2.resize(tmp,(constants.FULL_IMGSIZE,constants.FULL_IMGSIZE),interpolation=cv2.INTER_CUBIC)
                 else:
-                    image = original
-                hsvimg = cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
-                image = np.concatenate((image,hsvimg),axis=-1)
+                    image = tmp
 
             #restore the graph and make the predictions and show the segmented image
             with tf.Session() as sess:
@@ -469,7 +456,7 @@ def main(unused_argv):
                 count = 0
                 count2 = 0
                 best_guess = np.full((h,w),-1)
-                raw_guess = np.full((h,w,6),0).astype(np.float32)
+                raw_guess = np.full((h,w,6),0)
                 tmp = []
                 i0 = int(constants.IMG_SIZE / 2)
                 j0 = int(constants.IMG_SIZE / 2)
@@ -480,7 +467,7 @@ def main(unused_argv):
 
                 imgname = os.path.basename(sys.argv[2])
                 modelname = os.path.dirname(sys.argv[3])
-                logname = "results/rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + '_' + modelname
+                logname = "results/rawoutput_" + str(os.path.splitext(os.path.basename(sys.argv[2]))[0]) + '_' + modelname + ".txt"
                 seg_file = 'results/' + os.path.splitext(imgname)[0] + '_' + modelname + '_learnedseg' + ".png"
 
                 #GO THROUGH EACH PIXEL WITHOUT THE EDGES SINCE WE NEED TO MAKE SURE EVERY PART OF THE PIXEL AREA
@@ -488,9 +475,10 @@ def main(unused_argv):
                 for i in range(int(constants.IMG_SIZE / 2),int(len(image) - (constants.IMG_SIZE / 2))):
                     for j in range(int(constants.IMG_SIZE / 2),int(len(image[0]) - (constants.IMG_SIZE / 2))):
 
-                        #append the box to a temporary array
                         #get the bounding box around the pixel to send to the training
                         box = image[i-int(constants.IMG_SIZE / 2):i+int(constants.IMG_SIZE / 2),j-int(constants.IMG_SIZE / 2):j+int(constants.IMG_SIZE / 2)]
+
+                        #append the box to a temporary array
                         tmp.append(box)
 
                         #once the temporary array is the same size as the batch size, run the testing on the batch
@@ -511,16 +499,14 @@ def main(unused_argv):
                                     j0 += 1
 
                             #give console output to show progress
-                            outputResults(image[:,:,:3],np.array(best_guess),fout=seg_file)
+                            outputResults(image,np.array(best_guess),fout=seg_file)
                             print('%i out of %i complete' % (count2,math.ceil(int((h - constants.IMG_SIZE) * (w - constants.IMG_SIZE) / constants.BATCH_SIZE))))
                             #empty tmporary array
                             tmp = []
                             count2 += 1
                         count += 1
 
-                #save raw output
                 np.save(logname,raw_guess)
-
         else:
             print("train ")
             print("trainseg ")
