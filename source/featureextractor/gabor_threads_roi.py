@@ -77,22 +77,22 @@ def process_threaded(img, filters):
     return combined, kernal_results
 
 
-def run_gabor(color_image, filters, image_filename, orientations=16, mode='training'):
+def run_gabor(color_image, filters, image_filename='', orientations=16, mode='training'):
     """
     Takes a source input image, runs the gabor filters on it, associates the location with a banded mask region,
         and saves it
 
     :param color_image:     The image to extract features from
     :param filters:         The return results from build_filters
-    :param image_filename:  Name of the color_image file
+    :param image_filename:  Name of the color_image file. (deprecated and currently does nothing)
     :param orientations:    Number of directions/orientations to split 360 into
     :param mode:            training/validation:
                                 training = generate and save ROI Gabor extracted histograms
                                 validation = Get Gabor histograms and return them for later use by an ANN to validate
     :return:                Complete set of all Histograms for the input color_image
     """
-    directory, filename = os.path.split(image_filename)
-    filename_minus_ext, ext = os.path.splitext(filename)
+    #directory, filename = os.path.split()
+    #filename_minus_ext, ext = os.path.splitext(filename)
 
     # Convert to grayscale so we don't get multiple "votes" per pixel per kernal/orientation
     img = cv2.cvtColor(color_image, cv2.COLOR_BGR2GRAY)
@@ -126,7 +126,7 @@ def run_gabor(color_image, filters, image_filename, orientations=16, mode='train
             all_gabors.append(bins)
 
     # run the data from the files through ANN
-    return np.vstack(all_gabors)
+    return np.vstack(all_gabors) / sum(all_gabors)
 
 def display_histogram(bins, color_image, combined_image, img, roi, roi_size, x, y):
     """
